@@ -28,4 +28,4 @@ Download the contents of the `release` folder and paste the _contents_ into your
 * The [Europa Barbarorum I team's](https://www.europabarbarorum.com/) Trivial Script launcher for showing what a good mod launcher could do.
 
 ### License
-The source code is licensed under the GNU Lesser General Public License v.3. See the license file for details.
+This software was created using Qt 5.12.2 and is licensed under the GNU General Public License version 3. See the license file for details.

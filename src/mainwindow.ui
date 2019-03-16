@@ -50,7 +50,7 @@
     </property>
     <property name="text">
      <string>Created by: jorellaf
-for the Rome: Total Realism Team, using QT 5.12.2 under the (L)GPL v3 license</string>
+for the Rome: Total Realism Team, using QT 5.12.2 under the GPL v3 license</string>
     </property>
     <property name="alignment">
      <set>Qt::AlignBottom|Qt::AlignRight|Qt::AlignTrailing</set>
