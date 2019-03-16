@@ -44,4 +44,6 @@ CMakeLists.txt.user*
 
 # Preferences folder in release
 /release/preferences
+
+# Compile commands file in src
 /src/compile_commands.json
