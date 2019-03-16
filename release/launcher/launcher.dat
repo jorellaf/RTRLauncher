@@ -1,0 +1,32 @@
+// ------------------------------------------------------------------------------------------------------------
+//EDU switchers
+
+dir:switchgametypes/campaign|campaign|Campaign Mode|edu
+dir:switchgametypes/battle|custombattle|Battle Mode|edu
+dir:switchgametypes/camplowupkeep|lowupkeep|Lanjane's Campaign Mode|edu
+
+// ------------------------------------------------------------------------------------------------------------
+// Trees switchers
+
+dir:switchtrees/trees_hi|trees_hi|Default Trees|trees
+dir:switchtrees/trees_lo|trees_lo|Low-Resolution Trees|trees
+
+// ------------------------------------------------------------------------------------------------------------
+// Campaign switchers
+
+//dir:campaigns/example1|example1|Example 1 Campaign|camp
+
+// ------------------------------------------------------------------------------------------------------------
+
+
+// ------------------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------------------
+// This is an example of a comment
+Lines without a colon will get ignored without displaying a warning too.
+//So will empty lines.
+
+// This file lists all the options available for launch (such as different EDUs for custom battle) and the files/folders the launcher will copy to the main data folder for the player (if there are files outside the data folder, append ../ at the beginning of the path)
+// Syntax: [dir/file]:[file path relative to RTR/data/]|[Option code]|[Display name for the option]|[Option type to be added]
+// File encoding must be in UTF-8!
+// ------------------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------------------
