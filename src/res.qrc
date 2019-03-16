@@ -1,0 +1,9 @@
+<RCC>
+    <qresource prefix="/">
+        <file>images/rtr.png</file>
+        <file>images/rtr_pressed.png</file>
+        <file>images/rtr_hover.png</file>
+        <file>images/marbletexture.png</file>
+        <file>images/rtricon.ico</file>
+    </qresource>
+</RCC>
