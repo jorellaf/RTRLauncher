@@ -1,4 +1,4 @@
-# The Rome: Total Realism VIII Launcher
+# Launcher for Rome: Total Realism VIII
 Official launcher for the [_Rome: Total Realism VIII_ (RTR8)](http://www.twcenter.net/forums/forumdisplay.php?26) modification for the _Rome: Total War - Alexander_ expansion.
 
 ---
