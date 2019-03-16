@@ -23,6 +23,9 @@ Download the contents of the `release` folder and paste the _contents_ into your
     * Automatically increase the maximum resolution of the game to 4K UHD to allow the game to run better in larger screens.
 * All options explained in detail through tooltips.
 
-### Additional credits
-The Rome: Total Realism VIII Logo: [lanjane](https://gitlab.rtrproject.com/Lanjane).
-The [Europa Barbarorum I team's](https://www.europabarbarorum.com/) Trivial Script launcher for showing what a good mod launcher could do.
+### Additional Credits
+* The Rome: Total Realism VIII Logo: [lanjane](https://gitlab.rtrproject.com/Lanjane).
+* The [Europa Barbarorum I team's](https://www.europabarbarorum.com/) Trivial Script launcher for showing what a good mod launcher could do.
+
+### License
+The source code is licensed under the GNU Lesser General Public License v.3. See the license file for details.
