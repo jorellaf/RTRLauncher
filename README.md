@@ -9,7 +9,7 @@ Download the contents of the `release` folder and paste the _contents_ into your
 #### Requirements
 * You need to have installed your copy of RTR8 inside the folder where your _Rome: Total War - Alexander_ expansion is located.
     * More specifically, the RTR8 path must be `~/RomeTW-Alex/RTR/`, where the executable for the _Rome: Total War - Alexander_ expansion is located in `~/RomeTW-Alexander/RomeTW-ALX.exe`. If the launcher does not find the executable file with that specific name, it will display an error.
-* The foder for the mod must be named `RTR`. Any other name will cause the launcher to display an error (this behaviour will be modified in a future update).
+* The folder for the mod must be named `RTR`. Any other name will cause the launcher to display an error (this behaviour will be modified in a future update).
 * The launcher requires a valid `launcher.dat` file (UTF-8 encoded) to run successfully.
     * The default RTR8 `launcher.dat` file can be found at `release/launcher/launcher.dat`. The file contains instructions for the syntax.
 
