@@ -26,13 +26,12 @@ SOURCES += \
         main.cpp \
         mainwindow.cpp \
         preferencesdialog.cpp \
-        functions.cpp
+    optiondata.cpp
 
 HEADERS += \
         mainwindow.h \
         preferencesdialog.h \
-        dataheader.h \
-        functions.h
+    optiondata.h
 
 FORMS += \
         mainwindow.ui \

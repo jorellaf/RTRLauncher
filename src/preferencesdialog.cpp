@@ -3,13 +3,9 @@
 #include <QMessageBox>
 #include <QDebug>
 
-#ifndef DATAHEADER_H
-#include "dataheader.h"
-#endif
-
-#ifndef FUNCTIONS_H
+/*#ifndef FUNCTIONS_H
 #include "functions.h"
-#endif
+#endif*/
 
 void PreferencesDialog::resetChecks()
 {
@@ -91,12 +87,30 @@ void PreferencesDialog::on_defaultsButton_clicked()
     }
 }
 
+int writePreferences(QString dataToWrite)
+{
+    QFile preferencesData(QCoreApplication::applicationDirPath() + preferencesFile);
+    if (!preferencesData.open(QIODevice::WriteOnly | QIODevice::Truncate))
+    {
+        QMessageBox::critical(nullptr,"File not writeable", "The preferences file could not be written. Please check your RTR installation and make sure the preferences file"\
+                                                     " is accessible.\n\nError: " + preferencesData.errorString());
+        return 500;
+    }
+    else
+    {
+        QTextStream out(&preferencesData);
+        out.setCodec("UTF-8");
+        out << dataToWrite;
+        preferencesData.close();
+        return 0;
+    }
+}
+
 void PreferencesDialog::on_saveButton_clicked()
 {
     QString preferencedata = preferencesTextGen();
-    Functions f;
-    if (f.writePreferences(preferencedata) == 0)
-        QMessageBox::information(0,"Success", "Your settings have been successfully saved.", QMessageBox::Ok);
+    if (writePreferences(preferencedata) == 0)
+        QMessageBox::information(this,"Success", "Your settings have been successfully saved.", QMessageBox::Ok);
     this->close();
 }
 
