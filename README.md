@@ -20,7 +20,7 @@ Download the contents of the `release` folder and paste the _contents_ into your
 * Change many common in-game preferences without needing to alter the preferences file.
     * Automatic generation of a preferences file, in case one is missing.
     * If a preferences file exists, all the preferences will be maintained as they are unless you change them in the launcher interface.
-    * Automatically increase the maximum resolution of the game to 4K UHD to allow the game to run better in larger screens.
+    * Automatically increase the maximum resolution of the game to 8K UHD to allow the game to run better in larger screens.
 * All options explained in detail through tooltips.
 
 ### Additional Credits

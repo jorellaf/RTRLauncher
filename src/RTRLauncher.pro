@@ -51,5 +51,5 @@ CONFIG += static
 static {
 
 DEFINES += STATIC
-message("Static build.")
+#message("Static build.")
 }
