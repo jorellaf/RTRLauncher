@@ -173,7 +173,7 @@ struct OptionObject
 };
 
 //
-// Create a struct to handle the options the player has selected in a previous run of the launcher.
+// Create a struct to handle the options the player has selected in a previous run of the launcher (TODO: refactor).
 struct PlayerOption
 {
     QString object; // The code of the object in question.
@@ -181,7 +181,7 @@ struct PlayerOption
 };
 
 //
-// Create a class to handle a list of all the options as a QList of OptionObject structs.
+// Create a class to handle all the options for campaigns, EDUs, and trees as a QList of OptionObject structs.
 class OptionData
 {
 private:

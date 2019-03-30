@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>230</width>
-    <height>300</height>
+    <height>310</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -24,8 +24,14 @@
     <stylestrategy>PreferAntialias</stylestrategy>
    </font>
   </property>
+  <property name="focusPolicy">
+   <enum>Qt::StrongFocus</enum>
+  </property>
+  <property name="contextMenuPolicy">
+   <enum>Qt::NoContextMenu</enum>
+  </property>
   <property name="windowTitle">
-   <string>RTR Preferences Editor</string>
+   <string>Preferences</string>
   </property>
   <property name="windowIcon">
    <iconset resource="res.qrc">
@@ -37,10 +43,10 @@
   <widget class="QPushButton" name="saveButton">
    <property name="geometry">
     <rect>
-     <x>65</x>
+     <x>10</x>
      <y>260</y>
-     <width>101</width>
-     <height>31</height>
+     <width>100</width>
+     <height>40</height>
     </rect>
    </property>
    <property name="toolTip">
@@ -192,10 +198,39 @@
     <string>Reset defaults</string>
    </property>
   </widget>
+  <widget class="QPushButton" name="discardButton">
+   <property name="geometry">
+    <rect>
+     <x>120</x>
+     <y>260</y>
+     <width>100</width>
+     <height>40</height>
+    </rect>
+   </property>
+   <property name="toolTip">
+    <string>Saves the selected settings to your preferences file and closes the window.</string>
+   </property>
+   <property name="text">
+    <string>Discard changes
+and close</string>
+   </property>
+  </widget>
   <zorder>groupBox</zorder>
   <zorder>saveButton</zorder>
   <zorder>defaultsButton</zorder>
+  <zorder>discardButton</zorder>
  </widget>
+ <tabstops>
+  <tabstop>saveButton</tabstop>
+  <tabstop>SHOW_BANNERS</tabstop>
+  <tabstop>DISABLE_ARROW_MARKERS</tabstop>
+  <tabstop>UNIT_EXPERIENCE_UPGRADE_EFFECT</tabstop>
+  <tabstop>MINIMAL_UI</tabstop>
+  <tabstop>UNLIMITED_MEN_ON_BATTLEFIELD</tabstop>
+  <tabstop>AUTO_SAVE</tabstop>
+  <tabstop>discardButton</tabstop>
+  <tabstop>defaultsButton</tabstop>
+ </tabstops>
  <resources>
   <include location="res.qrc"/>
  </resources>

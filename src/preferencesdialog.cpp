@@ -1,5 +1,6 @@
 #include "preferencesdialog.h"
 #include "ui_preferencesdialog.h"
+
 #include <QMessageBox>
 #include <QDebug>
 
@@ -63,6 +64,7 @@ PreferencesDialog::PreferencesDialog(QWidget *parent) :
 {
     ui->setupUi(this);
     setWindowFlags(Qt::Window | Qt::WindowMinimizeButtonHint | Qt::WindowCloseButtonHint | Qt::MSWindowsFixedSizeDialogHint);
+    this->setLocale(QLocale::system());
 
     prefmodifiers = {false,true,false,true,true,true,false};
     listofprefs = {ui->SHOW_BANNERS, ui->DISABLE_ARROW_MARKERS, ui->UNIT_EXPERIENCE_UPGRADE_EFFECT, ui->MINIMAL_UI,
@@ -87,12 +89,12 @@ void PreferencesDialog::on_defaultsButton_clicked()
     }
 }
 
-int writePreferences(QString dataToWrite)
+int PreferencesDialog::writePreferences(QString dataToWrite)
 {
     QFile preferencesData(QCoreApplication::applicationDirPath() + preferencesFile);
     if (!preferencesData.open(QIODevice::WriteOnly | QIODevice::Truncate))
     {
-        QMessageBox::critical(nullptr,"File not writeable", "The preferences file could not be written. Please check your RTR installation and make sure the preferences file"\
+        QMessageBox::critical(this,"File not writeable", "The preferences file could not be written. Please check your RTR installation and make sure the preferences file"\
                                                      " is accessible.\n\nError: " + preferencesData.errorString());
         return 500;
     }
@@ -111,10 +113,15 @@ void PreferencesDialog::on_saveButton_clicked()
     QString preferencedata = preferencesTextGen();
     if (writePreferences(preferencedata) == 0)
         QMessageBox::information(this,"Success", "Your settings have been successfully saved.", QMessageBox::Ok);
-    this->close();
+    //this->close();
 }
 
 void PreferencesDialog::reject()
 {
         done(0);
+}
+
+void PreferencesDialog::on_discardButton_clicked()
+{
+    this->close();
 }

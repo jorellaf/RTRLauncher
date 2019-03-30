@@ -10,7 +10,7 @@ int main(int argc, char *argv[])
     MainWindow w;
     w.show();
 
-    int result = w.startUp();
+    int result = w.startSetup();
     if (result != 0)
         return result;
 

@@ -1,178 +1,71 @@
+// Include class headers.
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
-/*#ifndef OPTIONDATA_H
-#include "optiondata.h"
-#endif
-
-#ifndef FUNCTIONS_H
-#include "functions.h"
-#endif*/
-
+// Include Qt classes used in the code.
 #include <QApplication>
 #include <QDir>
 #include <QProcess>
 #include <QFileInfo>
 #include <QMessageBox>
-#include <QDebug>
 #include <QDateTime>
+#include <QLocale>
 
-void MainWindow::resetChecks()
+// ==================
+// Public methods:
+
+// Constructor for the UI window element class (parent window intialised to none by default; *parent = nullptr).
+MainWindow::MainWindow(QWidget *parent) :
+    // Default Qt UI window class inheritance.
+    QMainWindow(parent),
+    ui(new Ui::MainWindow)
 {
-    foreach (QCheckBox *c, listofprefsmainwindow)
-    {
-        c->setChecked(false);
-    }
-    ui->showerrBox->setChecked(true);
+    // Default Qt UI setup declaration.
+    ui->setupUi(this);
+    // Setting the window flags. The main window should be a window (Qt::Window), it should have a minimise and close
+    // buttons, but maximise should be disabled (Qt::WindowMinimize... & Qt::WindowClose...), and, on Windows, since it
+    // is a window of fixed size, it should look as such (Qt::MSWindowsFixedSize...).
+    setWindowFlags(Qt::Window | Qt::WindowMinimizeButtonHint | Qt::WindowCloseButtonHint | Qt::MSWindowsFixedSizeDialogHint);
+    // Set the locale of the main launcher window to be the system's locale.
+    this->setLocale(QLocale::system());
+
+    // Store all the checkboxes in the mainwindow in the QList of QCheckBoxes variable.
+    checkboxeslist = {ui->showerrBox, ui->neBox, ui->nmBox, ui->multirunBox, ui->editorBox, ui->moviecamBox, ui->naBox, ui->aiBox, ui->spritesBox, ui->swBox, ui->maprwmBox};
+
+    // Snippet by user 'Barracuda' from https://stackoverflow.com/a/23227915.
+    // Set an image as the background of the launcher window.
+    QPixmap bground(":/images/marbletexture.png");
+    bground = bground.scaled(this->size(), Qt::IgnoreAspectRatio);
+    QPalette palette;
+    palette.setBrush(QPalette::Background, bground);
+    this->setPalette(palette);
+    // End of snippet.
+
+    // Snippet by user 'stackunderflow' and 'Basti Vagabond' from https://stackoverflow.com/a/12734881.
+    // Make main button have an elliptical shape, fit to the button icon.
+    QRect rect(23,22,155,156);
+    QRegion region (rect,QRegion::Ellipse);
+    ui->launchButton->setMask(region);
+    // End of snippet.
+
+    prefsdialog = new PreferencesDialog(this);
+
+    QPixmap bground2(":/images/marbletexture.png");
+    bground2 = bground2.scaled(prefsdialog->size(), Qt::IgnoreAspectRatio);
+    QPalette palette2;
+    palette2.setBrush(QPalette::Background, bground2);
+    prefsdialog->setPalette(palette2);
 }
 
-bool MainWindow::checkDefaults(Ui::MainWindow *ui)
-{
-    bool checked = true;
-    foreach (QCheckBox *c, listofprefsmainwindow)
-    {
-        if (c->objectName()!="showerrBox")
-                checked = checked && !c->checkState();
-    }
-    checked = checked && ui->showerrBox->checkState();
-    return checked;
-}
-
-QString playerDataTextGen(Ui::MainWindow *ui)
-{
-    QString dataText = "// ------------------------------------------------------------------------------------------------------------\n"\
-            "// Start options checkboxes\n";
-    dataText += QString("showerrBox:%1").arg(ui->showerrBox->isChecked() ? "1" : "0") + "\n";
-    dataText += QString("neBox:%1").arg(ui->neBox->isChecked() ? "1" : "0") + "\n";
-    dataText += QString("nmBox:%1").arg(ui->nmBox->isChecked() ? "1" : "0") + "\n";
-    dataText += QString("multirunBox:%1").arg(ui->multirunBox->isChecked() ? "1" : "0") + "\n";
-    dataText += QString("editorBox:%1").arg(ui->editorBox->isChecked() ? "1" : "0") + "\n";
-    dataText += QString("moviecamBox:%1").arg(ui->moviecamBox->isChecked() ? "1" : "0") + "\n";
-    dataText += QString("naBox:%1").arg(ui->naBox->isChecked() ? "1" : "0") + "\n";
-    dataText += QString("aiBox:%1").arg(ui->aiBox->isChecked() ? "1" : "0") + "\n";
-    dataText += QString("spritesBox:%1").arg(ui->spritesBox->isChecked() ? "1" : "0") + "\n";
-    dataText += QString("swBox:%1").arg(ui->swBox->isChecked() ? "1" : "0") + "\n";
-    dataText += QString("maprwmBox:%1").arg(ui->maprwmBox->isChecked() ? "1" : "0") + "\n";
-    dataText += "\n// ------------------------------------------------------------------------------------------------------------\n"\
-            "// EDU select\n";
-    dataText += QString("eduComboBox:%1").arg(ui->eduComboBox->currentData().toString()) + "\n";
-    dataText += "\n// ------------------------------------------------------------------------------------------------------------\n"\
-            "// Trees select\n";
-    dataText += QString("treesComboBox:%1").arg(ui->treesComboBox->currentData().toString()) + "\n";
-    dataText += "\n// ------------------------------------------------------------------------------------------------------------\n"\
-            "// Campaign select\n";
-    dataText += QString("campComboBox:%1").arg(ui->campComboBox->currentData().toString()) + "\n";
-    dataText += "\n// ------------------------------------------------------------------------------------------------------------\n\n"\
-            "\n// ------------------------------------------------------------------------------------------------------------\n"\
-            "// ------------------------------------------------------------------------------------------------------------\n"\
-            "// This is an example of a comment\n"\
-            "Lines without a colon will get ignored without displaying a warning too.\n"\
-            "//So will empty lines.\n\n"\
-            "// This file lists all the player-customised options chosen for launching the game, including start options and chosen campaign and game type.\n"\
-            "// Syntax: [option code]:[setting code]\n"\
-            "// File encoding must be in UTF-8!\n"\
-            "// ------------------------------------------------------------------------------------------------------------\n"\
-            "// ------------------------------------------------------------------------------------------------------------\n";
-    return dataText;
-}
-
-int checkMapRwm()
-{
-    QDir basefolder(QCoreApplication::applicationDirPath() + "/../data/world/maps/base");
-    QFileInfo map(basefolder.absolutePath() + "/map.rwm");
-    QDateTime mapmod = map.lastModified();
-    basefolder.setFilter(QDir::Files);
-    if (basefolder.exists())
-    {
-        if (map.exists() && map.isFile())
-        {
-            QFileInfoList filelist = basefolder.entryInfoList(QDir::Files);
-            foreach (QFileInfo fileinfo, filelist)
-            {
-                if (map.exists())
-                {
-                    QString ext = fileinfo.suffix();
-                    if (ext=="tga" || ext=="txt")
-                    {
-                        QDateTime filemod = fileinfo.lastModified();
-                        if (mapmod < filemod)
-                        {
-                            QFile mapfile(map.absoluteFilePath());
-                            if (mapfile.remove())
-                                return 0;
-                            else
-                                return 1;
-                        }
-                    }
-                }
-            }
-            return 2;
-        }
-        else
-            return 3;
-    }
-    else
-        return 4;
-}
-
-QStringList setArguments(Ui::MainWindow *ui)
-{
-    QStringList argList;
-    argList.append("-mod:RTR");
-    if (ui->showerrBox->isChecked())
-        argList.append("-show_err");
-    if (ui->neBox->isChecked())
-        argList.append("-ne");
-    if (ui->nmBox->isChecked())
-        argList.append("-nm");
-    if (ui->multirunBox->isChecked())
-        argList.append("-multirun");
-    if (ui->editorBox->isChecked())
-        argList.append("-enable_editor");
-    if (ui->moviecamBox->isChecked())
-        argList.append("-movie_cam");
-    if (ui->naBox->isChecked())
-        argList.append("-na");
-    if (ui->aiBox->isChecked())
-        argList.append("-ai");
-    if (ui->spritesBox->isChecked())
-        argList.append("-sprite_script");
-    if (ui->swBox->isChecked())
-        argList.append("-sw");
-
-    if (ui->maprwmBox->isChecked())
-    {
-        int result = checkMapRwm();
-        switch (result)
-        {
-        case 1:
-            QMessageBox::critical(nullptr,"Error!", "The map.rwm file was out of date but could not be deleted.\nPlease try again. If this error persists, check your RTR installation.", QMessageBox::Close);
-            QMessageBox::StandardButton confirm;
-            confirm = QMessageBox::warning(nullptr,"Continue launching?", "The map file could not be deleted and will be out of date.\n"\
-                                 "Would you like to continue launching the game?",QMessageBox::Yes|QMessageBox::No);
-            if (confirm == QMessageBox::No)
-                argList[0] = "nope";
-            break;
-        case 4:
-            QMessageBox::critical(nullptr,"Critical error", "The base campaign folder was not found. Make sure you have installed RTR correctly,"\
-                                                  "and that the launcher is in the location \n[RTW install folder]/[RTR mod folder]/[launcher folder]/RTRLauncher.exe.\n\n", QMessageBox::Close);
-                argList[0] = "nope";
-            break;
-        }
-    }
-
-    return argList;
-}
-
-int MainWindow::startUp()
+int MainWindow::startSetup()
 {
     //Functions f;
     //Check if all the RTR stuff is present
-    QString rtrcheck = rtrPresent();
+    QString rtrcheck = launcherReqFilesCheck();
     if (rtrcheck!="yes")
     {
         QMessageBox rtrerror;
-        rtrerror.critical(nullptr,"Error", rtrcheck, QMessageBox::Close);
+        rtrerror.critical(this,"Error", rtrcheck, QMessageBox::Close);
         rtrerror.setFixedWidth(200);
         return 404;
     }
@@ -202,50 +95,8 @@ int MainWindow::startUp()
     return 0;
 }
 
-MainWindow::MainWindow(QWidget *parent) :
-    QMainWindow(parent),
-    ui(new Ui::MainWindow)
-{
-    ui->setupUi(this);
-    setWindowFlags(Qt::Window | Qt::WindowMinimizeButtonHint | Qt::WindowCloseButtonHint | Qt::MSWindowsFixedSizeDialogHint);
-
-    this->listofprefsmainwindow = {ui->showerrBox, ui->neBox, ui->nmBox, ui->multirunBox, ui->editorBox, ui->moviecamBox, ui->naBox, ui->aiBox, ui->spritesBox, ui->swBox, ui->maprwmBox};
-
-    // snippet taken from https://stackoverflow.com/a/23227915
-    QPixmap bground(":/images/marbletexture.png");
-    bground = bground.scaled(this->size(), Qt::IgnoreAspectRatio);
-    QPalette palette;
-    palette.setBrush(QPalette::Background, bground);
-    this->setPalette(palette);
-    //
-
-    // snippet taken from https://stackoverflow.com/a/12734881
-    QRect *rect = new QRect(23,22,155,156);
-    QRegion* region = new QRegion(*rect,QRegion::Ellipse);
-    ui->launchButton->setMask(*region);
-    //
-    preferencesd = new PreferencesDialog(this);
-
-    readPreferences(preferencesd);
-    preferencesd->setChangesMadeFalse();
-
-    QPixmap bground2(":/images/marbletexture.png");
-    bground2 = bground2.scaled(preferencesd->size(), Qt::IgnoreAspectRatio);
-    QPalette palette2;
-    palette2.setBrush(QPalette::Background, bground2);
-    preferencesd->setPalette(palette2);
-}
-
-MainWindow::~MainWindow()
-{
-    delete preferencesd;
-    delete ui;
-}
-
-void MainWindow::closeEvent(QCloseEvent *event)
-{
-    QApplication::quit();
-}
+// ==================
+// Slots:
 
 void MainWindow::on_launchButton_pressed()
 {
@@ -265,13 +116,13 @@ void MainWindow::on_launchButton_clicked()
 {
     ui->launchButton->setEnabled(false);
     //Save settings
-    QString dataText = playerDataTextGen(ui);
+    QString dataText = playerDataTextGen();
     bool goahead = true;
 
-    if(writePreferences(preferencesd->preferencesText)==500)
+    if(this->prefsdialog->writePreferences(prefsdialog->preferencesText)==500)
     {
         QMessageBox::StandardButton confirm;
-        confirm = QMessageBox::warning(nullptr,"Continue launching?", "Your preferences could not be saved, and will be discarded if you launch the game.\n"\
+        confirm = QMessageBox::warning(this,"Continue launching?", "Your preferences could not be saved, and will be discarded if you launch the game.\n"\
                              "Would you like to continue launching the game?",QMessageBox::Yes|QMessageBox::No);
         if (confirm == QMessageBox::No)
             goahead = false;
@@ -280,7 +131,7 @@ void MainWindow::on_launchButton_clicked()
     if(writePlayerData(dataText)==500)
     {
         QMessageBox::StandardButton confirm;
-        confirm = QMessageBox::warning(nullptr,"Continue launching?", "Your changes could not be saved, and will be discarded if you launch the game.\n"\
+        confirm = QMessageBox::warning(this,"Continue launching?", "Your changes could not be saved, and will be discarded if you launch the game.\n"\
                              "Would you like to continue launching the game?",QMessageBox::Yes|QMessageBox::No);
         if (confirm == QMessageBox::No)
             goahead = false;
@@ -346,13 +197,13 @@ void MainWindow::on_launchButton_clicked()
     {
         errortext += "\nAlthough the game may run normally, it is likely your desired configuration will\nnot be in effect, and the game might not even start correctly\n\nDo you wish to continue launching the game?";
         QMessageBox::StandardButton confirm;
-        confirm = QMessageBox::critical(nullptr,"Error!:",errortext,QMessageBox::Yes|QMessageBox::No);
+        confirm = QMessageBox::critical(this,"Error!:",errortext,QMessageBox::Yes|QMessageBox::No);
         if (confirm == QMessageBox::No)
             goahead = false;
     }
     //qDebug() << eduswitch;
 
-    QStringList commands = setArguments(ui);
+    QStringList commands = this->setArguments();
     if (goahead == true && commands[0]!="nope")
     {
 
@@ -371,7 +222,7 @@ void MainWindow::on_launchButton_clicked()
             QApplication::quit();
         }
         else
-            QMessageBox::critical(nullptr,"Critical error", "The Rome Total War: Alexander executable was not found. Make sure you have installed RTR correctly,"\
+            QMessageBox::critical(this,"Critical error", "The Rome Total War: Alexander executable was not found. Make sure you have installed RTR correctly,"\
                                                   "and that the launcher is in the location \n[RTW install folder]/[RTR mod folder]/[launcher folder]/RTRLauncher.exe.\n\n", QMessageBox::Close);
     }
     ui->launchButton->setEnabled(true);
@@ -383,19 +234,19 @@ void MainWindow::on_mapButton_clicked()
     switch (result)
     {
     case 0:
-        QMessageBox::information(nullptr,"Success", "The map.rwm file was out of date and was successfully deleted.\nAn up-to-date file will be generated by the game at launch.", QMessageBox::Close);
+        QMessageBox::information(this,"Success", "The map.rwm file was out of date and was successfully deleted.\nAn up-to-date file will be generated by the game at launch.", QMessageBox::Close);
         break;
     case 1:
-        QMessageBox::critical(nullptr,"Error!", "The map.rwm file was out of date but could not be deleted.\nPlease try again. If this error persists, check your RTR installation.", QMessageBox::Close);
+        QMessageBox::critical(this,"Error!", "The map.rwm file was out of date but could not be deleted.\nPlease try again. If this error persists, check your RTR installation.", QMessageBox::Close);
         break;
     case 2:
-        QMessageBox::information(nullptr,"Success", "The map.rwm file was up-to-date.\nNo further action was needed.", QMessageBox::Close);
+        QMessageBox::information(this,"Success", "The map.rwm file was up-to-date.\nNo further action was needed.", QMessageBox::Close);
         break;
     case 3:
-        QMessageBox::information(nullptr,"Success", "The map.rwm file was not present.\nAn up-to-date file will be generated by the game at launch.", QMessageBox::Close);
+        QMessageBox::information(this,"Success", "The map.rwm file was not present.\nAn up-to-date file will be generated by the game at launch.", QMessageBox::Close);
         break;
     case 4:
-        QMessageBox::critical(nullptr,"Critical error", "The base campaign folder was not found. Make sure you have installed RTR correctly,"\
+        QMessageBox::critical(this,"Critical error", "The base campaign folder was not found. Make sure you have installed RTR correctly,"\
                                               "and that the launcher is in the location \n[RTW install folder]/[RTR mod folder]/[launcher folder]/RTRLauncher.exe.\n\n", QMessageBox::Close);
         break;
     }
@@ -403,14 +254,16 @@ void MainWindow::on_mapButton_clicked()
 
 void MainWindow::on_preferencesButton_clicked()
 {
-    preferencesd->show();
+    readPreferences();
+    prefsdialog->setChangesMadeFalse();
+    prefsdialog->exec();
 }
 
 void MainWindow::on_saveButton_clicked()
 {
-    QString dataText = playerDataTextGen(ui);
+    QString dataText = playerDataTextGen();
     if (writePlayerData(dataText)==0)
-        QMessageBox::information(nullptr,"Success", "Your settings have been successfully saved.", QMessageBox::Ok);
+        QMessageBox::information(this,"Success", "Your settings have been successfully saved.", QMessageBox::Ok);
 }
 
 void MainWindow::on_discardButton_clicked()
@@ -434,39 +287,45 @@ void MainWindow::on_defaultsButton_clicked()
     }
 }
 
+// ==================
+// Private methods:
+
+// Check file/folder existence methods:
 // snippet taken from https://stackoverflow.com/a/26991243
-bool MainWindow::fileExists(QString path)
+bool MainWindow::fileExists(QString abspath)
 {
-    QFileInfo check_file(path);
+    QFileInfo check_file(abspath);
     // check if file exists and if yes: Is it really a file and no directory?
     return check_file.exists() && check_file.isFile();
 }
 
 // snippet taken and adapted from https://stackoverflow.com/a/26991243
-bool MainWindow::dirExists(QString path)
+bool MainWindow::dirExists(QString abspath)
 {
-    QFileInfo check_file(path);
+    QFileInfo check_file(abspath);
     // check if file exists and if yes: Is it really a directory and no file?
     return check_file.exists() && check_file.isDir();
 }
 
 // Assuming launcher will be in RTW/RTR/Launcher/
-QString MainWindow::rtrPresent()
+QString MainWindow::launcherReqFilesCheck()
 {
-    QString rtrcheck = "";
+    QString returnstring = "";
     if (!fileExists(QCoreApplication::applicationDirPath() + "/../../RomeTW-ALX.exe"))
-        rtrcheck += "The Rome Total War: Alexander executable was not found. Make sure you have installed RTR correctly,"\
+        returnstring += "The Rome Total War: Alexander executable was not found. Make sure you have installed RTR correctly,"\
                     "and that the launcher is in the location \n[RTW install folder]/[RTR mod folder]/[launcher folder]/RTRLauncher.exe.\n\n";
     if (!dirExists(QCoreApplication::applicationDirPath() + "/../data"))
-        rtrcheck += "The RTR data folder was not found. Make sure you have installed RTR correctly\n\n";
+        returnstring += "The RTR data folder was not found. Make sure you have installed RTR correctly\n\n";
     if (!fileExists(QCoreApplication::applicationDirPath() + launcherDataFile))
-        rtrcheck += "Could not find the data file for the launcher (launcher.dat) in the launcher folder. Check that you have installed RTR correctly"\
+        returnstring += "Could not find the data file for the launcher (launcher.dat) in the launcher folder. Check that you have installed RTR correctly"\
                     " and not moved any files in the launcher folder.\n\n";
-    if (rtrcheck.isEmpty())
-        rtrcheck = "yes";
-    return rtrcheck;
+    //remove critical errors line
+    //if (returnstring.isEmpty())
+        returnstring = "yes";
+    return returnstring;
 }
 
+// Read data methods:
 int MainWindow::readLauncherData(OptionData *l)
 {
     QFile launcherData(QCoreApplication::applicationDirPath() + launcherDataFile);
@@ -474,7 +333,7 @@ int MainWindow::readLauncherData(OptionData *l)
     {
         if (!launcherData.open(QIODevice::ReadOnly | QIODevice::Text))
         {
-            QMessageBox::critical(nullptr,"File not readable", "The data file could not be read. Please check your RTR installation and make sure the data"\
+            QMessageBox::critical(this,"File not readable", "The data file could not be read. Please check your RTR installation and make sure the data"\
                                                          " is accessible.\n\nError: " + launcherData.errorString());
             return 500;
         }
@@ -551,7 +410,7 @@ int MainWindow::readLauncherData(OptionData *l)
         if (!warningtext.isEmpty())
         {
             warningtext = "The following errors were found in the launcher data file:\n\n" + warningtext;
-            QMessageBox::warning(nullptr,"Launcher data error!", warningtext, QMessageBox::Close);
+            QMessageBox::warning(this,"Launcher data error!", warningtext, QMessageBox::Close);
         }
         launcherData.close();
 
@@ -559,61 +418,9 @@ int MainWindow::readLauncherData(OptionData *l)
     }
     else
     {
-        QMessageBox::critical(nullptr,"Launcher data error!", "Could not find the data file for the launcher (launcher.dat) in the launcher folder. Check that you have installed RTR correctly"\
+        QMessageBox::critical(this,"Launcher data error!", "Could not find the data file for the launcher (launcher.dat) in the launcher folder. Check that you have installed RTR correctly"\
                                                     " and not moved any files in the launcher folder.\n\n", QMessageBox::Close);
         return 500;
-    }
-}
-
-void MainWindow::setOptions(OptionData *l, QComboBox *comboBoxObject, QString optiontypelocal)
-{
-    QString defaultname = "Default";
-    if (optiontypelocal=="camp")
-        defaultname = "RTR Main Campaign";
-    if (l->getListByOptionType(optiontypelocal).size()==0)
-    {
-        comboBoxObject->addItem(defaultname,"default");
-        comboBoxObject->setEnabled(false);
-    }
-    else
-    {
-        foreach (OptionObject optionobj, l->getListByOptionType(optiontypelocal))
-        {
-            comboBoxObject->addItem(optionobj.displayname,optionobj.optioncode);
-        }
-    }
-}
-
-//void MainWindow::setCampOptions(ListOptionObjects *l, QComboBox *campComboBox)
-//{
-//    if (l->getListOfCamps().size()==0)
-//    {
-//        campComboBox->addItem("RTR Main Campaign","default");
-//        campComboBox->setEnabled(false);
-//    }
-//    else
-//    {
-//        foreach (OptionObject optionobj, l->getListOfCamps())
-//            campComboBox->addItem(optionobj.displayname,optionobj.optioncode);
-//    }
-//}
-
-int MainWindow::writePlayerData(QString dataToWrite)
-{
-    QFile playerData(QCoreApplication::applicationDirPath() + playerDataFile);
-    if (!playerData.open(QIODevice::WriteOnly | QIODevice::Truncate))
-    {
-        QMessageBox::critical(0,"File not writeable", "The player data file could not be written. Please check your RTR installation and make sure the player data file"\
-                                                     " is accessible.\n\nError: " + playerData.errorString());
-        return 500;
-    }
-    else
-    {
-        QTextStream out(&playerData);
-        out.setCodec("UTF-8");
-        out << dataToWrite;
-        playerData.close();
-        return 0;
     }
 }
 
@@ -624,7 +431,7 @@ void MainWindow::readPlayerData(QList<PlayerOption> *l, MainWindow *w)
     if (fileExists(playerDataPath))
     {
         if (!playerData.open(QIODevice::ReadOnly))
-            QMessageBox::critical(0,"File not readable", "The player data file could not be read. Please check your RTR installation and make sure the player data file"\
+            QMessageBox::critical(this,"File not readable", "The player data file could not be read. Please check your RTR installation and make sure the player data file"\
                                                          " is accessible.\n\nError: " + playerData.errorString());
         else
         {
@@ -682,7 +489,7 @@ void MainWindow::readPlayerData(QList<PlayerOption> *l, MainWindow *w)
             if (!warningtext.isEmpty())
             {
                 warningtext = "The following errors were found in the player data file:\n\n" + warningtext;
-                QMessageBox::warning(0,"Player data errors!", warningtext, QMessageBox::Close);
+                QMessageBox::warning(this,"Player data errors!", warningtext, QMessageBox::Close);
             }
             playerData.close();
         }
@@ -694,46 +501,250 @@ void MainWindow::readPlayerData(QList<PlayerOption> *l, MainWindow *w)
     }
 }
 
-// function taken from https://forum.qt.io/topic/59245/is-there-any-api-to-recursively-copy-a-directory-and-all-it-s-sub-dirs-and-files/3
-bool MainWindow::copyRecursively(QString sourceFolder, QString destFolder)
+QString MainWindow::playerDataTextGen()
 {
-    bool success = false;
-    QDir sourceDir(sourceFolder);
+    QString dataText = "// ------------------------------------------------------------------------------------------------------------\n"\
+            "// Start options checkboxes\n";
+    dataText += QString("showerrBox:%1").arg(ui->showerrBox->isChecked() ? "1" : "0") + "\n";
+    dataText += QString("neBox:%1").arg(ui->neBox->isChecked() ? "1" : "0") + "\n";
+    dataText += QString("nmBox:%1").arg(ui->nmBox->isChecked() ? "1" : "0") + "\n";
+    dataText += QString("multirunBox:%1").arg(ui->multirunBox->isChecked() ? "1" : "0") + "\n";
+    dataText += QString("editorBox:%1").arg(ui->editorBox->isChecked() ? "1" : "0") + "\n";
+    dataText += QString("moviecamBox:%1").arg(ui->moviecamBox->isChecked() ? "1" : "0") + "\n";
+    dataText += QString("naBox:%1").arg(ui->naBox->isChecked() ? "1" : "0") + "\n";
+    dataText += QString("aiBox:%1").arg(ui->aiBox->isChecked() ? "1" : "0") + "\n";
+    dataText += QString("spritesBox:%1").arg(ui->spritesBox->isChecked() ? "1" : "0") + "\n";
+    dataText += QString("swBox:%1").arg(ui->swBox->isChecked() ? "1" : "0") + "\n";
+    dataText += QString("maprwmBox:%1").arg(ui->maprwmBox->isChecked() ? "1" : "0") + "\n";
+    dataText += "\n// ------------------------------------------------------------------------------------------------------------\n"\
+            "// EDU select\n";
+    dataText += QString("eduComboBox:%1").arg(ui->eduComboBox->currentData().toString()) + "\n";
+    dataText += "\n// ------------------------------------------------------------------------------------------------------------\n"\
+            "// Trees select\n";
+    dataText += QString("treesComboBox:%1").arg(ui->treesComboBox->currentData().toString()) + "\n";
+    dataText += "\n// ------------------------------------------------------------------------------------------------------------\n"\
+            "// Campaign select\n";
+    dataText += QString("campComboBox:%1").arg(ui->campComboBox->currentData().toString()) + "\n";
+    dataText += "\n// ------------------------------------------------------------------------------------------------------------\n\n"\
+            "\n// ------------------------------------------------------------------------------------------------------------\n"\
+            "// ------------------------------------------------------------------------------------------------------------\n"\
+            "// This is an example of a comment\n"\
+            "Lines without a colon will get ignored without displaying a warning too.\n"\
+            "//So will empty lines.\n\n"\
+            "// This file lists all the player-customised options chosen for launching the game, including start options and chosen campaign and game type.\n"\
+            "// Syntax: [option code]:[setting code]\n"\
+            "// File encoding must be in UTF-8!\n"\
+            "// ------------------------------------------------------------------------------------------------------------\n"\
+            "// ------------------------------------------------------------------------------------------------------------\n";
+    return dataText;
+}
 
-    if(!sourceDir.exists())
-        return false;
+void MainWindow::readPreferences()
+{
+    QVector<PlayerOption> maxresolutions;
+    PlayerOption po = {"STRATEGY_MAX_RESOLUTION",maxres};
+    maxresolutions.append(po);
+    po.object = "BATTLE_MAX_RESOLUTION";
+    maxresolutions.append(po);
 
-    QDir destDir(destFolder);
-    if(!destDir.exists())
-        destDir.mkdir(destFolder);
-
-    QStringList files = sourceDir.entryList(QDir::Files);
-    for(int i = 0; i< files.count(); i++) {
-        QString srcName = sourceFolder + QDir::separator() + files[i];
-        QString destName = destFolder + QDir::separator() + files[i];
-        QFileInfo file(destName);
-        if (file.exists())
-        {
-            QFile filetorm(destName);
-            filetorm.remove();
-        }
-        success = QFile::copy(srcName, destName);
-        if(!success)
-            return false;
-    }
-
-    files.clear();
-    files = sourceDir.entryList(QDir::AllDirs | QDir::NoDotAndDotDot);
-    for(int i = 0; i< files.count(); i++)
+    QString prefPath = QCoreApplication::applicationDirPath() + preferencesFile;
+    QString prefFolder = QCoreApplication::applicationDirPath() + "/../preferences";
+    QDir preferencesDir(prefFolder);
+    if (!dirExists(prefFolder))
     {
-        QString srcName = sourceFolder + QDir::separator() + files[i];
-        QString destName = destFolder + QDir::separator() + files[i];
-        success = copyRecursively(srcName, destName);
-        if(!success)
-            return false;
+        if(!preferencesDir.mkdir(prefFolder))
+        {
+            QMessageBox::critical(this,"Folder creation error", "The preferences folder is missing and could not be created. Please try again or create the folder '[RomeTW folder]/[RTR folder]/preferences/' manually.");
+            prefsdialog->close();
+            return;
+        }
     }
+    QFile prefData(prefPath);
+    //qDebug() << prefPath;
+    if (prefData.exists())
+    {
+        if (!prefData.open(QIODevice::ReadWrite))
+            QMessageBox::critical(this,"File not readable", "The preferences file could not be read. Please check your RTR installation and make sure the preferences file"\
+                                                         " is accessible.\n\nError: " + prefData.errorString());
+        else
+        {
+            QString preferencesData = "";
+            QTextStream in(&prefData);
+            in.setCodec("UTF-8");
+            QString warningtext="";
+            uint linenumber=0;
+            bool needsupdate = false;
+            while (!in.atEnd())
+            {
+                QString line = in.readLine().simplified();
+                if(line!="" && line.split(":").size()>1)
+                {
+                    QStringList linedata = line.split("//")[0].split(":");
+                    if (linedata[0]=="" || linedata[1]=="")
+                        warningtext += QString("Error at line %1: invalid empty argument.\n").arg(linenumber);
+                    else
+                    {
+                        //qDebug() << linedata[0];
+                        //qDebug() << w->findChild<QObject *>(linedata[0]);
+                        if (linedata[0]==maxresolutions.at(0).object || linedata[0]==maxresolutions.at(1).object)
+                        {
+                            preferencesData += linedata[0] + ":" + maxres + "\n";
+                            if (linedata[1]!=maxres)
+                                needsupdate = true;
+                        }
+                        else
+                        {
+                            //qDebug() << linedata[0];
+                            if (prefsdialog->findChild<QCheckBox *>(linedata[0]))
+                            {
+                                QCheckBox *uiObject = prefsdialog->findChild<QCheckBox *>(linedata[0]);
+                                QList<bool> modifiers = prefsdialog->getMods();
+                                QList<QCheckBox *> listofboxes = prefsdialog->getListPrefs();
+                                int i=0;
+                                bool status = false;
+                                if(linedata[1]=="TRUE")
+                                    status = true;
+                                bool moddedstatus=false;
+                                foreach (QCheckBox *cb, listofboxes)
+                                {
+                                    if (cb->objectName()==uiObject->objectName())
+                                        moddedstatus = status == modifiers.at(i);
+                                        i++;
+                                }
+                                uiObject->setChecked(moddedstatus);
+                            }
+                            //qDebug() << status;
+                            preferencesData += line + "\n";
+                        }
+                    }
+                }
+                else
+                    preferencesData += line + "\n";
+            }
+            if (needsupdate)
+            {
+                prefData.resize(0);
+                QTextStream out(&prefData);
+                in.setCodec("UTF-8");
+                out << preferencesData;
+            }
+            prefsdialog->preferencesText = preferencesData;
+            //qDebug() << p->preferencesText;
+            //qDebug() << preferencesData;
+            if (!warningtext.isEmpty())
+            {
+                warningtext = "The following errors were found in the player data file:\n\n" + warningtext;
+                QMessageBox::warning(this,"Preferences file errors!", warningtext, QMessageBox::Close);
+            }
+            prefData.close();
+        }
+    }
+    else
+    {
+        //qDebug() << "no preferences file";
+        prefsdialog->writePreferences(defaultPreferencesData);
+    }
+}
 
-    return true;
+void MainWindow::setOptions(OptionData *l, QComboBox *comboBoxObject, QString optiontypelocal)
+{
+    QString defaultname = "Default";
+    if (optiontypelocal=="camp")
+        defaultname = "RTR Main Campaign";
+    if (l->getListByOptionType(optiontypelocal).size()==0)
+    {
+        comboBoxObject->addItem(defaultname,"default");
+        comboBoxObject->setEnabled(false);
+    }
+    else
+    {
+        foreach (OptionObject optionobj, l->getListByOptionType(optiontypelocal))
+        {
+            comboBoxObject->addItem(optionobj.displayname,optionobj.optioncode);
+        }
+    }
+}
+
+// Checking data methods:
+bool MainWindow::checkDefaults(Ui::MainWindow *ui)
+{
+    bool checked = true;
+    foreach (QCheckBox *c, checkboxeslist)
+    {
+        if (c->objectName()!="showerrBox")
+                checked = checked && !c->checkState();
+    }
+    checked = checked && ui->showerrBox->checkState();
+    return checked;
+}
+
+int MainWindow::checkMapRwm()
+{
+    QDir basefolder(QCoreApplication::applicationDirPath() + "/../data/world/maps/base");
+    QFileInfo map(basefolder.absolutePath() + "/map.rwm");
+    QDateTime mapmod = map.lastModified();
+    basefolder.setFilter(QDir::Files);
+    if (basefolder.exists())
+    {
+        if (map.exists() && map.isFile())
+        {
+            QFileInfoList filelist = basefolder.entryInfoList(QDir::Files);
+            foreach (QFileInfo fileinfo, filelist)
+            {
+                if (map.exists())
+                {
+                    QString ext = fileinfo.suffix();
+                    if (ext=="tga" || ext=="txt")
+                    {
+                        QDateTime filemod = fileinfo.lastModified();
+                        if (mapmod < filemod)
+                        {
+                            QFile mapfile(map.absoluteFilePath());
+                            if (mapfile.remove())
+                                return 0;
+                            else
+                                return 1;
+                        }
+                    }
+                }
+            }
+            return 2;
+        }
+        else
+            return 3;
+    }
+    else
+        return 4;
+}
+
+// Reset options methods:
+void MainWindow::resetChecks()
+{
+    foreach (QCheckBox *c, checkboxeslist)
+    {
+        c->setChecked(false);
+    }
+    ui->showerrBox->setChecked(true);
+}
+
+// Write data and launch game methods.
+int MainWindow::writePlayerData(QString dataToWrite)
+{
+    QFile playerData(QCoreApplication::applicationDirPath() + playerDataFile);
+    if (!playerData.open(QIODevice::WriteOnly | QIODevice::Truncate))
+    {
+        QMessageBox::critical(this,"File not writeable", "The player data file could not be written. Please check your RTR installation and make sure the player data file"\
+                                                     " is accessible.\n\nError: " + playerData.errorString());
+        return 500;
+    }
+    else
+    {
+        QTextStream out(&playerData);
+        out.setCodec("UTF-8");
+        out << dataToWrite;
+        playerData.close();
+        return 0;
+    }
 }
 
 int MainWindow::filefolderSwitch(QString currentoption, QList<OptionObject> options)
@@ -798,109 +809,93 @@ int MainWindow::filefolderSwitch(QString currentoption, QList<OptionObject> opti
     //return messagetext;
 }
 
-void MainWindow::readPreferences(PreferencesDialog *p)
+// function taken from https://forum.qt.io/topic/59245/is-there-any-api-to-recursively-copy-a-directory-and-all-it-s-sub-dirs-and-files/3
+bool MainWindow::copyRecursively(QString sourceFolder, QString destFolder)
 {
-    QVector<PlayerOption> maxresolutions;
-    PlayerOption po = {"STRATEGY_MAX_RESOLUTION",maxres};
-    maxresolutions.append(po);
-    po.object = "BATTLE_MAX_RESOLUTION";
-    maxresolutions.append(po);
+    bool success = false;
+    QDir sourceDir(sourceFolder);
 
-    QString prefPath = QCoreApplication::applicationDirPath() + preferencesFile;
-    QString prefFolder = QCoreApplication::applicationDirPath() + "/../preferences";
-    QDir preferencesDir(prefFolder);
-    if (!dirExists(prefFolder))
-    {
-        if(!preferencesDir.mkdir(prefFolder))
+    if(!sourceDir.exists())
+        return false;
+
+    QDir destDir(destFolder);
+    if(!destDir.exists())
+        destDir.mkdir(destFolder);
+
+    QStringList files = sourceDir.entryList(QDir::Files);
+    for(int i = 0; i< files.count(); i++) {
+        QString srcName = sourceFolder + QDir::separator() + files[i];
+        QString destName = destFolder + QDir::separator() + files[i];
+        QFileInfo file(destName);
+        if (file.exists())
         {
-            QMessageBox::critical(nullptr,"Folder creation error", "The preferences folder is missing and could not be created. Please try again or create the folder '[RomeTW folder]/[RTR folder]/preferences/' manually.");
-            p->close();
-            return;
+            QFile filetorm(destName);
+            filetorm.remove();
+        }
+        success = QFile::copy(srcName, destName);
+        if(!success)
+            return false;
+    }
+
+    files.clear();
+    files = sourceDir.entryList(QDir::AllDirs | QDir::NoDotAndDotDot);
+    for(int i = 0; i< files.count(); i++)
+    {
+        QString srcName = sourceFolder + QDir::separator() + files[i];
+        QString destName = destFolder + QDir::separator() + files[i];
+        success = copyRecursively(srcName, destName);
+        if(!success)
+            return false;
+    }
+
+    return true;
+}
+
+QStringList MainWindow::setArguments()
+{
+    QStringList argList;
+    argList.append("-mod:RTR");
+    if (ui->showerrBox->isChecked())
+        argList.append("-show_err");
+    if (ui->neBox->isChecked())
+        argList.append("-ne");
+    if (ui->nmBox->isChecked())
+        argList.append("-nm");
+    if (ui->multirunBox->isChecked())
+        argList.append("-multirun");
+    if (ui->editorBox->isChecked())
+        argList.append("-enable_editor");
+    if (ui->moviecamBox->isChecked())
+        argList.append("-movie_cam");
+    if (ui->naBox->isChecked())
+        argList.append("-na");
+    if (ui->aiBox->isChecked())
+        argList.append("-ai");
+    if (ui->spritesBox->isChecked())
+        argList.append("-sprite_script");
+    if (ui->swBox->isChecked())
+        argList.append("-sw");
+
+    if (ui->maprwmBox->isChecked())
+    {
+        int result = checkMapRwm();
+        switch (result)
+        {
+        case 1:
+            QMessageBox::critical(this,"Error!", "The map.rwm file was out of date but could not be deleted.\nPlease try again. If this error persists, check your RTR installation.", QMessageBox::Close);
+            QMessageBox::StandardButton confirm;
+            confirm = QMessageBox::warning(this,"Continue launching?", "The map file could not be deleted and will be out of date.\n"\
+                                 "Would you like to continue launching the game?",QMessageBox::Yes|QMessageBox::No);
+            if (confirm == QMessageBox::No)
+                argList[0] = "nope";
+            break;
+        case 4:
+            QMessageBox::critical(this,"Critical error", "The base campaign folder was not found. Make sure you have installed RTR correctly,"\
+                                                  "and that the launcher is in the location \n[RTW install folder]/[RTR mod folder]/[launcher folder]/RTRLauncher.exe.\n\n", QMessageBox::Close);
+                argList[0] = "nope";
+            break;
         }
     }
-    QFile prefData(prefPath);
-    //qDebug() << prefPath;
-    if (prefData.exists())
-    {
-        if (!prefData.open(QIODevice::ReadWrite))
-            QMessageBox::critical(nullptr,"File not readable", "The preferences file could not be read. Please check your RTR installation and make sure the preferences file"\
-                                                         " is accessible.\n\nError: " + prefData.errorString());
-        else
-        {
-            QString preferencesData = "";
-            QTextStream in(&prefData);
-            in.setCodec("UTF-8");
-            QString warningtext="";
-            uint linenumber=0;
-            bool needsupdate = false;
-            while (!in.atEnd())
-            {
-                QString line = in.readLine().simplified();
-                if(line!="" && line.split(":").size()>1)
-                {
-                    QStringList linedata = line.split("//")[0].split(":");
-                    if (linedata[0]=="" || linedata[1]=="")
-                        warningtext += QString("Error at line %1: invalid empty argument.\n").arg(linenumber);
-                    else
-                    {
-                        //qDebug() << linedata[0];
-                        //qDebug() << w->findChild<QObject *>(linedata[0]);
-                        if (linedata[0]==maxresolutions.at(0).object || linedata[0]==maxresolutions.at(1).object)
-                        {
-                            preferencesData += linedata[0] + ":" + maxres + "\n";
-                            if (linedata[1]!=maxres)
-                                needsupdate = true;
-                        }
-                        else
-                        {
-                            //qDebug() << linedata[0];
-                            if (p->findChild<QCheckBox *>(linedata[0]))
-                            {
-                                QCheckBox *uiObject = p->findChild<QCheckBox *>(linedata[0]);
-                                QList<bool> modifiers = p->getMods();
-                                QList<QCheckBox *> listofboxes = p->getListPrefs();
-                                int i=0;
-                                bool status = false;
-                                if(linedata[1]=="TRUE")
-                                    status = true;
-                                bool moddedstatus=false;
-                                foreach (QCheckBox *cb, listofboxes)
-                                {
-                                    if (cb->objectName()==uiObject->objectName())
-                                        moddedstatus = status == modifiers.at(i);
-                                        i++;
-                                }
-                                uiObject->setChecked(moddedstatus);
-                            }
-                            //qDebug() << status;
-                            preferencesData += line + "\n";
-                        }
-                    }
-                }
-                else
-                    preferencesData += line + "\n";
-            }
-            if (needsupdate)
-            {
-                prefData.resize(0);
-                QTextStream out(&prefData);
-                in.setCodec("UTF-8");
-                out << preferencesData;
-            }
-            p->preferencesText = preferencesData;
-            //qDebug() << p->preferencesText;
-            //qDebug() << preferencesData;
-            if (!warningtext.isEmpty())
-            {
-                warningtext = "The following errors were found in the player data file:\n\n" + warningtext;
-                QMessageBox::warning(nullptr,"Preferences file errors!", warningtext, QMessageBox::Close);
-            }
-            prefData.close();
-        }
-    }
-    else
-    {
-        //qDebug() << "no preferences file";
-        writePreferences(defaultPreferencesData);
-    }
+
+    return argList;
 }

@@ -40,8 +40,8 @@ FORMS += \
 RESOURCES += \
         res.qrc
 
-QMAKE_CXXFLAGS += \
-        -fpermissive
+#QMAKE_CXXFLAGS += \
+#        -fpermissive
 
 win32:RC_ICONS += \
         images/rtricon.ico
