@@ -29,11 +29,11 @@ MainWindow::MainWindow(QWidget *parent) :
     // Set the locale of the main launcher window to be the system's locale.
     this->setLocale(QLocale::system());
 
-    // Store all the checkboxes in the mainwindow in the QList of QCheckBoxes variable.
+    // Store all the objects of the main window's settings checkboxes in the QList of QCheckBoxes variable.
     checkboxeslist = {ui->showerrBox, ui->neBox, ui->nmBox, ui->multirunBox, ui->editorBox, ui->moviecamBox, ui->naBox, ui->aiBox, ui->spritesBox, ui->swBox, ui->maprwmBox};
 
     // Snippet by user 'Barracuda' from https://stackoverflow.com/a/23227915.
-    // Set an image as the background of the launcher window.
+    // Set an image as the background of the main launcher window.
     QPixmap bground(":/images/marbletexture.png");
     bground = bground.scaled(this->size(), Qt::IgnoreAspectRatio);
     QPalette palette;
@@ -48,183 +48,216 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->launchButton->setMask(region);
     // End of snippet.
 
+    // A new instance of the preferences window to the variable in the MainWindow class as a child of this main window.
     prefsdialog = new PreferencesDialog(this);
 
-    QPixmap bground2(":/images/marbletexture.png");
-    bground2 = bground2.scaled(prefsdialog->size(), Qt::IgnoreAspectRatio);
-    QPalette palette2;
-    palette2.setBrush(QPalette::Background, bground2);
-    prefsdialog->setPalette(palette2);
+    // Snippet by user 'Barracuda' from https://stackoverflow.com/a/23227915.
+    // Set an image as the background of the preferences editor window.
+    QPixmap bgroundprefs(":/images/marbletexture.png");
+    bgroundprefs = bgroundprefs.scaled(prefsdialog->size(), Qt::IgnoreAspectRatio);
+    QPalette paletteprefs;
+    paletteprefs.setBrush(QPalette::Background, bgroundprefs);
+    prefsdialog->setPalette(paletteprefs);
+    // End of snippet.
 }
 
+// Method for the initial loading of variables from the player data file and set-up of previously selected options.
+// Returns an integer success/error code.
 int MainWindow::startSetup()
 {
-    //Functions f;
-    //Check if all the RTR stuff is present
-    QString rtrcheck = launcherReqFilesCheck();
-    if (rtrcheck!="yes")
+    //Check if all the required files (and folders) are present.
+    QString reqfilescheck = launcherReqFilesCheck();
+    // If some of the required files and folders are not present (the return string is not 'y'), then show a critical
+    // error message, and return a specific error code.
+    if (reqfilescheck != "y")
     {
-        QMessageBox rtrerror;
-        rtrerror.critical(this,"Error", rtrcheck, QMessageBox::Close);
-        rtrerror.setFixedWidth(200);
+        // Create the QMessageBox object we will display to the user.
+        QMessageBox reqserror;
+        // Make it a critical error template with a single button, with the return string of the launcherReqFilesCheck
+        // method as the body, since it returns the string describing the error(s), and a single 'close' button.
+        reqserror.critical(this, "Error", reqfilescheck, QMessageBox::Close, QMessageBox::Close);
+        // Set a fixed with, otherwise it will be a thousand pixels wide to show each line without a carriage return.
+        reqserror.setFixedWidth(200);
+        // Return an error code 404, very cleverly referencing the HTTP error for file not found.
         return 404;
     }
 
-    // Read launcher data
-    OptionData *l = &listoptions;
-    if (readLauncherData(l)==500)
-        return 500;
+    // Read launcher data.
+    // Integer to store the return code of the readLauncherData method and call the method with the reference of the
+    // launcheroptionslist object to allow adding options to the list from within the readLauncherData method.
+    int launcherdatacheck = readLauncherData(&launcheroptionslist);
+    // If the return code is not 0 for 'all ok', return an error code to the caller.
+    if (launcherdatacheck != 0)
+        return launcherdatacheck;
 
-    // EDU options
-    QComboBox *eduComboBox = findChild<QComboBox*>("eduComboBox");
-    setOptions(l, eduComboBox,"edu");
+    // Fill combobox of campaign options with the data from the launcher data file.
+    // Find the QComboBox object for the campaign options combobox.
+    QComboBox *campComboBox = this->findChild<QComboBox*>("campComboBox");
+    // Call the setOptions method with the reference to our launcheroptionslist object containing the options from the
+    // launcher data file, the QComboBox to be filled, and the string of the option type used in the launcher.dat file.
+    setOptions(&launcheroptionslist, campComboBox, "camp");
 
-    // Campaign options
-    QComboBox *campComboBox = findChild<QComboBox*>("campComboBox");
-    setOptions(l, campComboBox, "camp");
+    // Fill combobox of unit roster (export_descr_unit.txt, EDU) options with the data from the launcher data file.
+    // Find the QComboBox object for the EDU options combobox.
+    QComboBox *eduComboBox = this->findChild<QComboBox*>("eduComboBox");
+    // See previous setOptions call comment.
+    setOptions(&launcheroptionslist, eduComboBox, "edu");
 
-    // Campaign options
-    QComboBox *treesComboBox = findChild<QComboBox*>("treesComboBox");
-    setOptions(l, treesComboBox, "trees");
+    // Fill combobox of trees options with the data from the launcher data file.
+    // Find the QComboBox object for the trees options combobox.
+    QComboBox *treesComboBox = this->findChild<QComboBox*>("treesComboBox");
+    // See previous setOptions call comment.
+    setOptions(&launcheroptionslist, treesComboBox, "trees");
 
+    // Pre-emptively reset all the checkboxes to defaults before loading the saved player data, in case of an error.
     resetChecks();
 
-    // Read player data
-    readPlayerData(&playeroptionlist,this);
+    // Read player data.
+    // Call method with the reference to the playeroptionslist object where the previous settings stored in the player
+    // data file will be stored at runtime. Since failing to load the previous settings is not critical, we do not
+    // return a value here, as any errors that come up are handled within the method.
+    readPlayerData(&playeroptionslist);
 
+    // We can only get here if there were no errors (and therefore no returns), so return an a-ok code 0.
     return 0;
 }
 
 // ==================
 // Slots:
 
+// When the launch button is pressed down:
 void MainWindow::on_launchButton_pressed()
 {
+    // Change the icon of the button from the regular mod icon to the highlighted button.
+    // Create a QIcon object, and add a QPixmap to it (an image object optimised by Qt for displaying on-screen).
     QIcon i;
     i.addPixmap(QPixmap(":/images/rtr_pressed.png"));
+    // Set the icon of the launcher button to the QIcon object created with the appropriate image.
     ui->launchButton->setIcon(i);
 }
 
+// When the launch button is released:
 void MainWindow::on_launchButton_released()
 {
+    // Change the icon of the button back to the regular one.
     QIcon i;
     i.addPixmap(QPixmap(":/images/rtr.png"));
+    // See on_launchButton_pressed slot method.
     ui->launchButton->setIcon(i);
 }
 
+// When the launch button is clicked (engaged, which is different from pressed, as the button can be pressed down and
+// held, but not 'activated') (does not necessarily have to be clicked, but can also be activated with the keyboard):
 void MainWindow::on_launchButton_clicked()
 {
+    // Disable the launcher button as soon as it is clicked to prevent accidentally launching the game multiple times.
     ui->launchButton->setEnabled(false);
-    //Save settings
+
+    // Generate the player data file contents.
     QString dataText = playerDataTextGen();
+
+    // Bool variable to let the launcher know it should go ahead with the launching of the game.
+    // Defaulted to true, made false in case there is an error on the way.
     bool goahead = true;
 
-    if(this->prefsdialog->writePreferences(prefsdialog->preferencesText)==500)
+    // Saving preferences from the main window doesn't seem like the best idea. Best left in the preferences window.
+    /*if(prefsdialog->writePreferences(prefsdialog->preferencesText)==400)
     {
         QMessageBox::StandardButton confirm;
         confirm = QMessageBox::warning(this,"Continue launching?", "Your preferences could not be saved, and will be discarded if you launch the game.\n"\
-                             "Would you like to continue launching the game?",QMessageBox::Yes|QMessageBox::No);
+                             "Would you like to continue launching the game?", QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
         if (confirm == QMessageBox::No)
             goahead = false;
-    }
+    }*/
 
-    if(writePlayerData(dataText)==500)
+    // If writing the player data file was not successful (did not return an a-ok 0), then warn the player.
+    if(writePlayerData(dataText) != 0)
     {
+        // Make a QMessageBox StandardButton object that will store the button the user pressed.
         QMessageBox::StandardButton confirm;
-        confirm = QMessageBox::warning(this,"Continue launching?", "Your changes could not be saved, and will be discarded if you launch the game.\n"\
-                             "Would you like to continue launching the game?",QMessageBox::Yes|QMessageBox::No);
+        // Make a message box asking the player to confirm if he wants to continue launching the game even though his
+        // settings could not be saved, with the default button (when pressing enter) being no.
+        confirm = QMessageBox::warning(this,"Continue launching?", "Your configuration could not be saved, and will be discarded if you launch the game.\n"\
+                             "Do you wish to continue launching the game?", QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+        // If the button pressed was the 'No' button:
         if (confirm == QMessageBox::No)
+            // Do not go ahead with launching the game.
             goahead = false;
     }
 
+    // String to store the error text if any of the switching operations for changing the options failed.
     QString errortext = "";
-    // EDU switch
-    QString comboboxtext = ui->eduComboBox->currentText();
-    int eduswitch = filefolderSwitch(ui->eduComboBox->currentData().toString(), listoptions.getListOfEdus());
-    switch (eduswitch)
-    {
-    case 1:
-        errortext = QString("The folder for the game type '%1' could not be copied.\n").arg(comboboxtext);
-        break;
-    case 2:
-        errortext = QString("The file for the game type '%1' could not be copied.\n").arg(comboboxtext);
-        break;
-    case 3:
-        errortext = QString("The files for the game type '%1' could not be found.\n").arg(comboboxtext);
-        break;
-    default:
-        break;
-    }
 
+    // TODO: Refactor the Player Option into its own class, with its own getter methods and make a comparison here between selected option and previous option.
+    // Append the string returned by the file/folder switch method (error text or nothing) to the errortext variable,
+    // which we call by sending the desired combobox and OptionData object with the desired option type.
+    // EDU switch:
+    errortext += filefolderSwitch(ui->eduComboBox, launcheroptionslist.getListOfEdus());
     // Campaign switch
-    comboboxtext = ui->campComboBox->currentText();
-    int campswitch = filefolderSwitch(ui->campComboBox->currentData().toString(), listoptions.getListOfCamps());
-    switch (campswitch)
-    {
-    case 1:
-        errortext += QString("The folder for the campaign '%1' could not be copied.\n").arg(comboboxtext);
-        break;
-    case 2:
-        errortext += QString("The file for the campaign '%1' could not be copied.\n").arg(comboboxtext);
-        break;
-    case 3:
-        errortext += QString("The files for the campaign '%1' could not be found.\n").arg(comboboxtext);
-        break;
-    default:
-        break;
-    }
-
+    errortext += filefolderSwitch(ui->campComboBox, launcheroptionslist.getListOfCamps());
     // Trees switch
-    comboboxtext = ui->treesComboBox->currentText();
-    int treesswitch = filefolderSwitch(ui->treesComboBox->currentData().toString(), listoptions.getListOfTrees());
-    switch (treesswitch)
-    {
-    case 1:
-        errortext += QString("The folder for the tree types '%1' could not be copied.\n").arg(comboboxtext);
-        break;
-    case 2:
-        errortext += QString("The file for the tree types '%1' could not be copied.\n").arg(comboboxtext);
-        break;
-    case 3:
-        errortext += QString("The files for the tree types '%1' could not be found.\n").arg(comboboxtext);
-        break;
-    default:
-        break;
-    }
+    errortext += filefolderSwitch(ui->treesComboBox, launcheroptionslist.getListOfTrees());
 
-
+    // If the errortext variable is not empty (i.e. there was an error along the way), then warn the player.
     if (!errortext.isEmpty())
     {
-        errortext += "\nAlthough the game may run normally, it is likely your desired configuration will\nnot be in effect, and the game might not even start correctly\n\nDo you wish to continue launching the game?";
+        // Add a final piece of information to the error text.
+        errortext += "\nAlthough the game may run normally, it is likely your desired configuration will\nnot be in effect, and the game might not even start correctly\n\n"\
+                "Do you wish to continue launching the game?";
+        // See above.
         QMessageBox::StandardButton confirm;
-        confirm = QMessageBox::critical(this,"Error!:",errortext,QMessageBox::Yes|QMessageBox::No);
+        confirm = QMessageBox::critical(this,"Error!", errortext, QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+        // If the button pressed was the 'No' button:
         if (confirm == QMessageBox::No)
+            // Do not go ahead with launching the game.
             goahead = false;
     }
-    //qDebug() << eduswitch;
 
-    QStringList commands = this->setArguments();
-    if (goahead == true && commands[0]!="nope")
+    // List of strings storing all the command line arguments that will be sent when launched, and filling the
+    // QStringList object with the selected options by calling the setArguments method.
+    QStringList commands = setArguments();
+
+    // If we have arrived all the way to here without any errors (goahead == true), and if the returned list of
+    // commands is not just 'n' (do not proceed) then proceed to take-off.
+    if (goahead == true && commands[0]!="n")
     {
-
-        // snippet taken from https://stackoverflow.com/a/19442886
-        QFileInfo check_file(QCoreApplication::applicationDirPath() + "/../../RomeTW-ALX.exe");
-        //qDebug() << check_file.absoluteFilePath();
-        QProcess *process = new QProcess(this);
-        if (check_file.exists() && check_file.isFile())
+        // QFileInfo object for the RTW executable to launch, assuming the user has correctly installed the launcher in
+        // [RTW/MODFOLDER/Launcher].
+        QFileInfo rtwexec(QCoreApplication::applicationDirPath() + "/../../RomeTW-ALX.exe");
+        // Check if the game executable can be found, is actually a file, and is executable, just to be sure.
+        if (rtwexec.exists() && rtwexec.isFile() && rtwexec.isExecutable())
         {
-            QString file = check_file.absoluteFilePath();
-            //file += commandlineswitches;
-            //QMessageBox::information(0,"Debug info", commands[commands.length()-1], QMessageBox::Close);
-            //process->setNativeArguments("-mod:RTR");
-            process->startDetached(file,commands,QCoreApplication::applicationDirPath() + "/../..");
-            process->waitForStarted();
-            QApplication::quit();
+            // Store the absolute file path of the executable file.
+            QString execabspath = rtwexec.absoluteFilePath();
+
+            // Previous failed attempts at launching the game with the command line arguments.
+            /* file += commandlineswitches;
+            process->setNativeArguments("-mod:X"); */
+
+            // Snippet by user 'tomvodi' from https://stackoverflow.com/a/19442886.
+            // Launch the game with the command line arguments requested by the user, as well as the mod name, making
+            // sure the game is not closed when the launcher is closed.
+            QProcess *process = new QProcess(this);
+            if (process->startDetached(execabspath,commands,QCoreApplication::applicationDirPath() + "/../.."))
+                // Close the launcher by quitting the application
+                // (though it would be better if it returned 0 to the main, but alas).
+                QApplication::quit();
+            else
+                // If the executable could not be launched, alert the user of the problem with a message box.
+                QMessageBox::critical(this,"Critical error!", "The Rome: Total War - Alexander executable could not be launched. Make sure you have installed Rome: Total War correctly,"\
+                                                             "and that the launcher is in the location \n[RTW install folder]/[RTR mod folder]/[launcher folder]/RTRLauncher.exe.",\
+                                      QMessageBox::Close, QMessageBox::Close);
         }
         else
-            QMessageBox::critical(this,"Critical error", "The Rome Total War: Alexander executable was not found. Make sure you have installed RTR correctly,"\
-                                                  "and that the launcher is in the location \n[RTW install folder]/[RTR mod folder]/[launcher folder]/RTRLauncher.exe.\n\n", QMessageBox::Close);
+        {
+            // If the executable was not found, alert the user of the problem with a message box.
+            QMessageBox::critical(this,"Critical error!", "The Rome: Total War - Alexander executable was not found. Make sure you have installed RTR correctly,"\
+                                                         "and that the launcher is in the location \n[RTW install folder]/[RTR mod folder]/[launcher folder]/RTRLauncher.exe.",\
+                                  QMessageBox::Close, QMessageBox::Close);
+        }
     }
+
+    // Finally, re-enable the launch button to let the user try again if there was an issue (launcher did not close).
     ui->launchButton->setEnabled(true);
 }
 
@@ -234,20 +267,20 @@ void MainWindow::on_mapButton_clicked()
     switch (result)
     {
     case 0:
-        QMessageBox::information(this,"Success", "The map.rwm file was out of date and was successfully deleted.\nAn up-to-date file will be generated by the game at launch.", QMessageBox::Close);
+        QMessageBox::information(this,"Success", "The map.rwm file was out of date and was successfully deleted.\nAn up-to-date file will be generated by the game at launch.", QMessageBox::Close, QMessageBox::Close);
         break;
     case 1:
-        QMessageBox::critical(this,"Error!", "The map.rwm file was out of date but could not be deleted.\nPlease try again. If this error persists, check your RTR installation.", QMessageBox::Close);
+        QMessageBox::critical(this,"Error!", "The map.rwm file was out of date but could not be deleted.\nPlease try again. If this error persists, check your RTR installation.", QMessageBox::Close, QMessageBox::Close);
         break;
     case 2:
-        QMessageBox::information(this,"Success", "The map.rwm file was up-to-date.\nNo further action was needed.", QMessageBox::Close);
+        QMessageBox::information(this,"Success", "The map.rwm file was up-to-date.\nNo further action was needed.", QMessageBox::Close, QMessageBox::Close);
         break;
     case 3:
-        QMessageBox::information(this,"Success", "The map.rwm file was not present.\nAn up-to-date file will be generated by the game at launch.", QMessageBox::Close);
+        QMessageBox::information(this,"Success", "The map.rwm file was not present.\nAn up-to-date file will be generated by the game at launch.", QMessageBox::Close, QMessageBox::Close);
         break;
     case 4:
-        QMessageBox::critical(this,"Critical error", "The base campaign folder was not found. Make sure you have installed RTR correctly,"\
-                                              "and that the launcher is in the location \n[RTW install folder]/[RTR mod folder]/[launcher folder]/RTRLauncher.exe.\n\n", QMessageBox::Close);
+        QMessageBox::critical(this,"Critical error!", "The base campaign folder was not found. Make sure you have installed RTR correctly,"\
+                                              "and that the launcher is in the location \n[RTW install folder]/[RTR mod folder]/[launcher folder]/RTRLauncher.exe.\n\n", QMessageBox::Close, QMessageBox::Close);
         break;
     }
 }
@@ -270,7 +303,7 @@ void MainWindow::on_discardButton_clicked()
 {
     QMessageBox::StandardButton confirm;
       confirm = QMessageBox::warning(this, "Confirm", "Are you sure you want to exit?\nAll your unsaved changes will be lost.",
-                                    QMessageBox::Yes|QMessageBox::No);
+                                    QMessageBox::Yes|QMessageBox::No, QMessageBox::No);
       if (confirm == QMessageBox::Yes)
         QApplication::quit();
 }
@@ -281,7 +314,7 @@ void MainWindow::on_defaultsButton_clicked()
     {
         QMessageBox::StandardButton confirm;
           confirm = QMessageBox::warning(this, "Confirm", "Are you sure you want to reset to the default settings?\nYour previous settings will still be stored in your\ndata file unless you launch the game or manually save.",
-                                        QMessageBox::Yes|QMessageBox::No);
+                                        QMessageBox::Yes|QMessageBox::No, QMessageBox::No);
           if (confirm == QMessageBox::Yes)
             resetChecks();
     }
@@ -312,7 +345,7 @@ QString MainWindow::launcherReqFilesCheck()
 {
     QString returnstring = "";
     if (!fileExists(QCoreApplication::applicationDirPath() + "/../../RomeTW-ALX.exe"))
-        returnstring += "The Rome Total War: Alexander executable was not found. Make sure you have installed RTR correctly,"\
+        returnstring += "The Rome: Total War - Alexander executable was not found. Make sure you have installed RTR correctly,"\
                     "and that the launcher is in the location \n[RTW install folder]/[RTR mod folder]/[launcher folder]/RTRLauncher.exe.\n\n";
     if (!dirExists(QCoreApplication::applicationDirPath() + "/../data"))
         returnstring += "The RTR data folder was not found. Make sure you have installed RTR correctly\n\n";
@@ -320,8 +353,8 @@ QString MainWindow::launcherReqFilesCheck()
         returnstring += "Could not find the data file for the launcher (launcher.dat) in the launcher folder. Check that you have installed RTR correctly"\
                     " and not moved any files in the launcher folder.\n\n";
     //remove critical errors line
-    //if (returnstring.isEmpty())
-        returnstring = "yes";
+    if (returnstring.isEmpty())
+        returnstring = "y";
     return returnstring;
 }
 
@@ -335,7 +368,7 @@ int MainWindow::readLauncherData(OptionData *l)
         {
             QMessageBox::critical(this,"File not readable", "The data file could not be read. Please check your RTR installation and make sure the data"\
                                                          " is accessible.\n\nError: " + launcherData.errorString());
-            return 500;
+            return 400;
         }
         QTextStream in(&launcherData);
         in.setCodec("UTF-8");
@@ -388,7 +421,7 @@ int MainWindow::readLauncherData(OptionData *l)
                                         //qDebug() << objpathdir.absolutePath();
                                         l->addObj(o);
                                     }
-                                    //QMessageBox::information(0,"Debug info", objpathdir.absolutePath(), QMessageBox::Close);
+                                    //QMessageBox::information(0,"Debug info", objpathdir.absolutePath(), QMessageBox::Close, QMessageBox::Close);
                                 }
                             }
                         }
@@ -410,7 +443,7 @@ int MainWindow::readLauncherData(OptionData *l)
         if (!warningtext.isEmpty())
         {
             warningtext = "The following errors were found in the launcher data file:\n\n" + warningtext;
-            QMessageBox::warning(this,"Launcher data error!", warningtext, QMessageBox::Close);
+            QMessageBox::warning(this,"Launcher data error!", warningtext, QMessageBox::Close, QMessageBox::Close);
         }
         launcherData.close();
 
@@ -419,12 +452,12 @@ int MainWindow::readLauncherData(OptionData *l)
     else
     {
         QMessageBox::critical(this,"Launcher data error!", "Could not find the data file for the launcher (launcher.dat) in the launcher folder. Check that you have installed RTR correctly"\
-                                                    " and not moved any files in the launcher folder.\n\n", QMessageBox::Close);
-        return 500;
+                                                    " and not moved any files in the launcher folder.\n\n", QMessageBox::Close, QMessageBox::Close);
+        return 404;
     }
 }
 
-void MainWindow::readPlayerData(QList<PlayerOption> *l, MainWindow *w)
+void MainWindow::readPlayerData(QList<PlayerOption> *l)
 {
     QString playerDataPath = QCoreApplication::applicationDirPath() + playerDataFile;
     QFile playerData(playerDataPath);
@@ -452,14 +485,14 @@ void MainWindow::readPlayerData(QList<PlayerOption> *l, MainWindow *w)
                     {
                         //qDebug() << linedata[0];
                         //qDebug() << w->findChild<QObject *>(linedata[0]);
-                        if (w->findChild<QCheckBox *>(linedata[0]) || w->findChild<QComboBox *>(linedata[0]))
+                        if (this->findChild<QCheckBox *>(linedata[0]) || this->findChild<QComboBox *>(linedata[0]))
                         {
                             o = {linedata[0],linedata[1]};
                             l->append(o);
-                            if (w->findChild<QCheckBox *>(linedata[0]))
+                            if (this->findChild<QCheckBox *>(linedata[0]))
                             {
-                                QCheckBox *uiObject = w->findChild<QCheckBox *>(linedata[0]);
-                                //QMessageBox::warning(0,"Preferences file errors!", uiObject->text(), QMessageBox::Close);
+                                QCheckBox *uiObject = this->findChild<QCheckBox *>(linedata[0]);
+                                //QMessageBox::warning(0,"Preferences file errors!", uiObject->text(), QMessageBox::Close, QMessageBox::Close);
                                 bool status = false;
                                 if(linedata[1]=="1")
                                     status = true;
@@ -467,7 +500,7 @@ void MainWindow::readPlayerData(QList<PlayerOption> *l, MainWindow *w)
                             }
                             else
                             {
-                                QComboBox *uiObject = w->findChild<QComboBox *>(linedata[0]);
+                                QComboBox *uiObject = this->findChild<QComboBox *>(linedata[0]);
                                 int indexOption = uiObject->findData(linedata[1]);
                                 //qDebug() << indexOption;
                                 if (linedata[1]!="default")
@@ -489,7 +522,7 @@ void MainWindow::readPlayerData(QList<PlayerOption> *l, MainWindow *w)
             if (!warningtext.isEmpty())
             {
                 warningtext = "The following errors were found in the player data file:\n\n" + warningtext;
-                QMessageBox::warning(this,"Player data errors!", warningtext, QMessageBox::Close);
+                QMessageBox::warning(this,"Player data errors!", warningtext, QMessageBox::Close, QMessageBox::Close);
             }
             playerData.close();
         }
@@ -634,7 +667,7 @@ void MainWindow::readPreferences()
             if (!warningtext.isEmpty())
             {
                 warningtext = "The following errors were found in the player data file:\n\n" + warningtext;
-                QMessageBox::warning(this,"Preferences file errors!", warningtext, QMessageBox::Close);
+                QMessageBox::warning(this,"Preferences file errors!", warningtext, QMessageBox::Close, QMessageBox::Close);
             }
             prefData.close();
         }
@@ -646,21 +679,21 @@ void MainWindow::readPreferences()
     }
 }
 
-void MainWindow::setOptions(OptionData *l, QComboBox *comboBoxObject, QString optiontypelocal)
+void MainWindow::setOptions(OptionData *l, QComboBox *combobox, QString optiontypelocal)
 {
     QString defaultname = "Default";
     if (optiontypelocal=="camp")
         defaultname = "RTR Main Campaign";
     if (l->getListByOptionType(optiontypelocal).size()==0)
     {
-        comboBoxObject->addItem(defaultname,"default");
-        comboBoxObject->setEnabled(false);
+        combobox->addItem(defaultname,"default");
+        combobox->setEnabled(false);
     }
     else
     {
         foreach (OptionObject optionobj, l->getListByOptionType(optiontypelocal))
         {
-            comboBoxObject->addItem(optionobj.displayname,optionobj.optioncode);
+            combobox->addItem(optionobj.displayname,optionobj.optioncode);
         }
     }
 }
@@ -735,7 +768,7 @@ int MainWindow::writePlayerData(QString dataToWrite)
     {
         QMessageBox::critical(this,"File not writeable", "The player data file could not be written. Please check your RTR installation and make sure the player data file"\
                                                      " is accessible.\n\nError: " + playerData.errorString());
-        return 500;
+        return 400;
     }
     else
     {
@@ -747,10 +780,11 @@ int MainWindow::writePlayerData(QString dataToWrite)
     }
 }
 
-int MainWindow::filefolderSwitch(QString currentoption, QList<OptionObject> options)
+QString MainWindow::filefolderSwitch(QComboBox *combobox, QList<OptionObject> options)
 {
-    if (currentoption=="default")
-        return 0;
+    QString currentoption = combobox->currentData().toString();
+    if (currentoption == "default")
+        return "";
     else
     {
         int indexfolder = -1;
@@ -772,9 +806,9 @@ int MainWindow::filefolderSwitch(QString currentoption, QList<OptionObject> opti
                 QDir data(QCoreApplication::applicationDirPath() + "/../data");
                 //qDebug() << data.absolutePath();
                 if (copyRecursively(o.abspath,data.absolutePath()))
-                    return 0;
+                    return "";
                 else
-                    return 1;
+                    return QString("The folder for the game type '%1' could not be copied.\n").arg(combobox->currentText());
                     //messagetext += QString("The folder of the game type '%1' could not be copied.\n").arg(o.displayname);
             }
             else
@@ -793,15 +827,15 @@ int MainWindow::filefolderSwitch(QString currentoption, QList<OptionObject> opti
                         filetorm.remove();
                     }
                     if (filecopy.copy(originalfilepath))
-                        return 0;
+                        return "";
                     else
                         //qDebug() << filecopy.errorString();
-                        return 2;
+                        return QString("The file for the game type '%1' could not be copied.\n").arg(combobox->currentText());;
                         //messagetext += QString("The file for the game type '%1' could not be copied.\n").arg(o.displayname);
                 }
             }
         }
-        return 3;
+        return QString("The files for the game type '%1' could not be found.\n").arg(combobox->currentText());
         //messagetext += QString("The files for the game type '%1' could not be found.\n").arg(ui->eduComboBox->currentText().toString());
     }
 
@@ -882,17 +916,17 @@ QStringList MainWindow::setArguments()
         switch (result)
         {
         case 1:
-            QMessageBox::critical(this,"Error!", "The map.rwm file was out of date but could not be deleted.\nPlease try again. If this error persists, check your RTR installation.", QMessageBox::Close);
+            QMessageBox::critical(this,"Error!", "The map.rwm file was out of date but could not be deleted.\nPlease try again. If this error persists, check your RTR installation.", QMessageBox::Close, QMessageBox::Close);
             QMessageBox::StandardButton confirm;
             confirm = QMessageBox::warning(this,"Continue launching?", "The map file could not be deleted and will be out of date.\n"\
                                  "Would you like to continue launching the game?",QMessageBox::Yes|QMessageBox::No);
             if (confirm == QMessageBox::No)
-                argList[0] = "nope";
+                argList[0] = "n";
             break;
         case 4:
-            QMessageBox::critical(this,"Critical error", "The base campaign folder was not found. Make sure you have installed RTR correctly,"\
-                                                  "and that the launcher is in the location \n[RTW install folder]/[RTR mod folder]/[launcher folder]/RTRLauncher.exe.\n\n", QMessageBox::Close);
-                argList[0] = "nope";
+            QMessageBox::critical(this,"Critical error!", "The base campaign folder was not found. Make sure you have installed RTR correctly,"\
+                                                  "and that the launcher is in the location \n[RTW install folder]/[RTR mod folder]/[launcher folder]/RTRLauncher.exe.\n\n", QMessageBox::Close, QMessageBox::Close);
+                argList[0] = "n";
             break;
         }
     }

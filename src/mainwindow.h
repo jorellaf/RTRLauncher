@@ -1,7 +1,7 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-// Including the data handler struts and classes from optiondata.h
+// Including the data handler structs and classes from optiondata.h
 #ifndef OPTIONDATA_H
 #include "optiondata.h"
 #endif
@@ -60,10 +60,10 @@ private:
     Ui::MainWindow *ui;
 
     // OptionData class for handling the list of options for the campaigns, EDUs, and trees selectors.
-    OptionData listoptions;
+    OptionData launcheroptionslist;
 
     // Declare a QList of PlayerOption structs for the options of the player data file (TODO: refactor).
-    QList<PlayerOption> playeroptionlist;
+    QList<PlayerOption> playeroptionslist;
 
     // Declare a QList of QCheckBox pointers for handling all the checkboxes of the mainwindow.
     QList<QCheckBox *> checkboxeslist;
@@ -89,7 +89,7 @@ private:
     int readLauncherData(OptionData *l);
 
     // Method to read the player data file.
-    void readPlayerData(QList<PlayerOption> *l, MainWindow *w);
+    void readPlayerData(QList<PlayerOption> *l);
 
     // Method to generate the text of the player data file.
     QString playerDataTextGen();
@@ -98,7 +98,7 @@ private:
     void readPreferences();
 
     // Method to add the available options of the launcher data file to their respective comboboxes.
-    void setOptions(OptionData *l, QComboBox *comboBoxObject, QString optiontypelocal);
+    void setOptions(OptionData *l, QComboBox *combobox, QString optiontypelocal);
 
 
         // Checking data methods:
@@ -118,7 +118,7 @@ private:
     int writePlayerData(QString dataToWrite);
 
     // Method to perform the switch between different campaigns, EDUs, and trees options.
-    int filefolderSwitch(QString currentoption, QList<OptionObject> listoptions);
+    QString filefolderSwitch(QComboBox *combobox, QList<OptionObject> launcheroptionslist);
 
     // Method to copy folders recursively and paste them recursively to their destination.
     bool copyRecursively(QString sourceFolder, QString destFolder);

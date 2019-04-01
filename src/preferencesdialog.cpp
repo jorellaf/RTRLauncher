@@ -96,7 +96,7 @@ int PreferencesDialog::writePreferences(QString dataToWrite)
     {
         QMessageBox::critical(this,"File not writeable", "The preferences file could not be written. Please check your RTR installation and make sure the preferences file"\
                                                      " is accessible.\n\nError: " + preferencesData.errorString());
-        return 500;
+        return 400;
     }
     else
     {
@@ -123,5 +123,8 @@ void PreferencesDialog::reject()
 
 void PreferencesDialog::on_discardButton_clicked()
 {
+    // TODO: Add confirmation dialog.
+    // TODO: Add check for changes.
+    // TODO: Add button tooltips.
     this->close();
 }
