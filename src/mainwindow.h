@@ -42,7 +42,7 @@ private slots:
     // Slot for the map.rwm checker button.
     void on_mapButton_clicked();
 
-    // Slot for the edit mod's RTW preferences.txt file button.
+    // Slot for the button to show the editor of the mod's RTW preferences.txt file.
     void on_preferencesButton_clicked();
 
     // Slot for the save settings button.
@@ -103,7 +103,7 @@ private:
 
         // Checking data methods:
     // Method to check whether the user's configuration is different from the defaults.
-    bool checkDefaults(Ui::MainWindow *ui);
+    bool checkDefaults();
 
     // Method to check whether the map.rwm file is up to date to the rest of the contents of the other map files.
     int checkMapRwm();
@@ -126,5 +126,7 @@ private:
     // Method to store the command line arguments to use when launching the executable into a QStringList.
     QStringList setArguments();
 };
+
+// TODO: Ask for confirmation to exit when closing the application.
 
 #endif // MAINWINDOW_H
