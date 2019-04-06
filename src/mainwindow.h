@@ -89,7 +89,7 @@ private:
     int readLauncherData(OptionData *l);
 
     // Method to read the player data file.
-    void readPlayerData(QList<PlayerOption> *l);
+    void readPlayerData();
 
     // Method to generate the text of the player data file.
     QString playerDataTextGen();

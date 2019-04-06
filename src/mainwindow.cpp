@@ -73,8 +73,8 @@ int MainWindow::startSetup()
     {
         // Create the QMessageBox object we will display to the user.
         QMessageBox reqserror;
-        // Make it a critical error template with a single button, with the return string of the launcherReqFilesCheck
-        // method as the body, since it returns the string describing the error(s), and a single 'close' button.
+        // Make it a critical error template, with the return string of the launcherReqFilesCheck method as the body,
+        // since it returns the string describing the error(s), and a single 'close' button.
         reqserror.critical(this, "Error", reqfilescheck, QMessageBox::Close, QMessageBox::Close);
         // Set a fixed with, otherwise it will be a thousand pixels wide to show each line without a carriage return.
         reqserror.setFixedWidth(200);
@@ -82,7 +82,7 @@ int MainWindow::startSetup()
         return 404;
     }
 
-    // Read launcher data.
+        // Read launcher data:
     // Integer to store the return code of the readLauncherData method and call the method with the reference of the
     // launcheroptionslist object to allow adding options to the list from within the readLauncherData method.
     int launcherdatacheck = readLauncherData(&launcheroptionslist);
@@ -98,13 +98,11 @@ int MainWindow::startSetup()
     setOptions(&launcheroptionslist, campComboBox, "camp");
 
     // Fill combobox of unit roster (export_descr_unit.txt, EDU) options with the data from the launcher data file.
-    // Find the QComboBox object for the EDU options combobox.
     QComboBox *eduComboBox = this->findChild<QComboBox*>("eduComboBox");
     // See previous setOptions call comment.
     setOptions(&launcheroptionslist, eduComboBox, "edu");
 
     // Fill combobox of trees options with the data from the launcher data file.
-    // Find the QComboBox object for the trees options combobox.
     QComboBox *treesComboBox = this->findChild<QComboBox*>("treesComboBox");
     // See previous setOptions call comment.
     setOptions(&launcheroptionslist, treesComboBox, "trees");
@@ -113,12 +111,11 @@ int MainWindow::startSetup()
     resetChecks();
 
     // Read player data.
-    // Call method with the reference to the playeroptionslist object where the previous settings stored in the player
-    // data file will be stored at runtime. Since failing to load the previous settings is not critical, we do not
-    // return a value here, as any errors that come up are handled within the method.
-    readPlayerData(&playeroptionslist);
+    // Since failing to load the previous settings is not critical, we do not return a value here, as any errors that
+    // come up are handled within the method.
+    readPlayerData();
 
-    // We can only get here if there were no errors (and therefore no returns), so return an a-ok code 0.
+    // We can only get here if there were no errors (and therefore no returns), so return an all ok code 0.
     return 0;
 }
 
@@ -170,7 +167,7 @@ void MainWindow::on_launchButton_clicked()
             goahead = false;
     }*/
 
-    // If writing the player data file was not successful (did not return an a-ok 0), then warn the player.
+    // If writing the player data file was not successful (did not return an all ok '0'), then warn the player.
     if(writePlayerData(dataText) != 0)
     {
         // Make a QMessageBox StandardButton object that will store the button the user pressed.
@@ -357,20 +354,29 @@ QString MainWindow::launcherReqFilesCheck()
     // both require the file path parameter to be an absolute path.
     if (!fileExists(QCoreApplication::applicationDirPath() + "/../../RomeTW-ALX.exe"))
         returnstring += "The Rome: Total War - Alexander executable was not found. Make sure you have installed RTR correctly,"\
-                    "and that the launcher is in the location \n[RTW install folder]/[RTR mod folder]/[launcher folder]/RTRLauncher.exe.\n\n";
+                    "and that the launcher is in the location \n[RTW install folder]/[RTR mod folder]/[launcher folder]/RTRLauncher.exe.";
 
     // If the mod data folder was not found, add an error message to the string.
     if (!dirExists(QCoreApplication::applicationDirPath() + "/../data"))
-        returnstring += "The RTR data folder was not found. Make sure you have installed RTR correctly\n\n";
-
+    {
+        // If the string is not empty, add two lines to separate the messages
+        if (!returnstring.isEmpty())
+            returnstring += "\n\n";
+        returnstring += "The RTR data folder was not found. Make sure you have installed RTR correctly";
+    }
     // If the launcher data file was not found, add an error message to the string.
     if (!fileExists(QCoreApplication::applicationDirPath() + launcherDataFile))
+    {
+        // If the string is not empty, add two lines to separate the messages
+        if (!returnstring.isEmpty())
+            returnstring += "\n\n";
         returnstring += "Could not find the data file for the launcher (launcher.dat) in the launcher folder. Check that you have installed RTR correctly"\
-                    " and not moved any files in the launcher folder.\n\n";
+                    " and not moved any files in the launcher folder.";
+    }
 
     // NOTE: Comment out next line to avoid critical error dialog blocking the launcher when testing.
     // If no error was recorded, then set the string to 'y' to signal that all the required files and dirs were found.
-    if (returnstring.isEmpty())
+    //if (returnstring.isEmpty())
         returnstring = "y";
 
     // Return whatever was in the return string.
@@ -379,69 +385,137 @@ QString MainWindow::launcherReqFilesCheck()
 
 // Read data methods:
 // Method to read the launcher data file.
+// Require an OptionData class where all the launcher options will be stored
 int MainWindow::readLauncherData(OptionData *l)
 {
-    QFile launcherData(QCoreApplication::applicationDirPath() + launcherDataFile);
-    if (launcherData.exists())
+    // Generate the absolute file path for the launcher data file using the relative path defined in optiondata.h.
+    QString launcherdatafilepath = QCoreApplication::applicationDirPath() + launcherDataFile;
+
+    // Check if the data file exists.
+    if (fileExists(launcherdatafilepath))
     {
+        // If it does, create a QFile object pointing to the absolute path of the file.
+        QFile launcherData(launcherdatafilepath);
+
+        // Try to open it, and if it doesn't, send a critical error and return an error code.
         if (!launcherData.open(QIODevice::ReadOnly | QIODevice::Text))
         {
             QMessageBox::critical(this,"File not readable", "The data file could not be read. Please check your RTR installation and make sure the data"\
                                                          " is accessible.\n\nError: " + launcherData.errorString());
             return 400;
         }
+
+        // Otherwise, create a QTextStream interface 'in' with a reference to the launcher data file.
         QTextStream in(&launcherData);
+        // Set the codec to UTF-8 for less limited script support.
         in.setCodec("UTF-8");
+
+        // Initialise an OptionObject struct to use for appending options to the list of options.
         OptionObject o = {"","","","",""};
+
+        // Create a QString to store any possible errors and warnings that come up when reading the file.
         QString warningtext="";
+        // And a line number counter to keep track of the line in which the errors and warnings were found.
         uint linenumber=0;
+
+            // Variables used in the file reading loop:
+        // A QString to store the contents of each line.
+        QString line = "";
+        // A list of QStrings to store the different data elements of each option in the file, the type of path (file
+        // or folder) and then the rest.
+        QStringList linedata = {""};
+        // A list of QStrings to store the elements of each option (file/folder path, code, name, type).
+        QStringList objargs = {""};
+        // QString to store the file/folder path of each option.
+        QString objpath = "";
+
+        // While we are still not at the end of the file:
         while (!in.atEnd())
         {
+            // Read the next line and store it in 'line', using simplified() to collapse any whitespace (such as tabs)
+            // to a single space, and then add one to the linenumber counter.
+            line = in.readLine().simplified();
             linenumber++;
-            QString line = in.readLine().simplified();
-            if(line.split("//")[0]!="" && line!="" && line.split("//")[0].split(":").size()>1)
+
+            // Check if the line is not empty, and, if commented with '//', there is something behind the comment, and,
+            // when the line behind the comment (if any) has at least one ':' character, then:
+            if(line != "" && line.split("//")[0] != "" && line.split("//")[0].split(":").size() > 1)
             {
-                QStringList linedata = line.split("//")[0].split(":");
-                if (linedata[1]=="" || linedata[1].split("|").size()!=4 || linedata[0]=="")
+                // Split the data behind any comment character ('//') by the character ':'.
+                linedata = line.split("//")[0].split(":");
+
+                // Check if there is nothing after the ':', or if what follows is not split in four elements
+                // (path|code|name|type) by the '|' divider, or if there is nothing behind the ':' character:
+                if (linedata[1] == "" || linedata[1].split("|").size() != 4 || linedata[0] == "")
+                    // If so, add a warning to the warning string.
                     warningtext += QString("Error at line %1: argument number is not valid.\n").arg(linenumber);
                 else
                 {
-                    if (linedata[0]!="dir" && linedata[0]!="file")
+                    // If not, then check if what's behind the ':' is not any of the two allowed options:
+                    if (linedata[0] != "dir" && linedata[0] != "file")
+                        // If so, add a warning to the warning string.
                         warningtext += QString("Error at line %1: the path type '%2' is invalid.\n").arg(linenumber).arg(linedata[0]);
                     else
                     {
-                        QStringList objargs = linedata[1].split("|");
+                        // If not, split the data after the ':' by the '|' dividing character.
+                        objargs = linedata[1].split("|");
+
+                        // Check if any of the four elements is not empty:
                         if (objargs[0]=="" || objargs[1]=="" || objargs[2]=="" || objargs[3]=="")
+                            // If so, add a warning to the warning string.
                             warningtext += QString("Error at line %1: invalid empty argument.\n").arg(linenumber);
                         else
                         {
+                            // If not, get the object path, and convert any backslash (has to be escaped with another
+                            // one here) to a forward slash, to allow for the use of either type.
+                            objpath = objargs[0].split("\\").join("/");
 
-                            QString objpath = objargs[0].split("\\").join("/");
-                            if (objpath.front()!="/")
+                            // If there is no forward slash at the front of the path in the file, add one, as it is
+                            // required in order to create the path for the Qt file/folder objects.
+                            if (objpath.front() != "/")
                                 objpath = QString("/" + objpath);
-                            if (linedata[0]=="file" && objpath.split("/").size()<3)
-                                warningtext += QString("Error at line %1: filepath is invalid (must be inside a folder inside /data/).\n").arg(linenumber);
-                            else if (linedata[0]=="file" && objpath.split("/")[1]=="")
-                                warningtext += QString("Error at line %1: filepath is invalid (must be inside a folder inside /data/).\n").arg(linenumber);
+
+                            // Check if, for files, there are fewer than two forward slashes in the path (/x/file.y).
+                            if (linedata[0] == "file" && objpath.split("/").size() < 3 )
+                                // If so, add a warning to the warning string, since this would be invalid.
+                                warningtext += QString("Error at line %1: file path is invalid (must be inside a folder inside /data/).\n").arg(linenumber);
+                            // Else, check if the file name at the end of the path is an empty string.
+                            else if (linedata[0] == "file" && objpath.split("/").last() == "")
+                                // If so, add a warning to the warning string.
+                                warningtext += QString("Error at line %1: file name is invalid.\n").arg(linenumber);
+                            // Else, check if there are any empty folder sequences ('//') for either files or folders.
                             else if (objpath.split("//").size()>1)
-                                warningtext += QString("Error at line %1: empty folder names are not allowed.\n").arg(linenumber);
+                                // If so, add a warning to the warning string.
+                                warningtext += QString("Error at line %1: empty folder names are not allowed. If you used '//' as a divider, please change it to '/' or '\'.\n")\
+                                        .arg(linenumber);
+                            // Else, check if the user tried to go up a level in the folder tree with '..'.
+                            else if (objpath.split("..").size()>1)
+                                // If so, add a warning to the warning string.
+                                warningtext += QString("Error at line %1: you may not go a level higher in the folder tree.\n").arg(linenumber);
                             else
                             {
-                                if (objargs[3]!="edu" && objargs[3]!="camp" && objargs[3]!="trees")
+                                // TODO: Refactor and make expansible.
+                                // If none of these issues were detected, check if the option type is not any of the
+                                // allowed options.
+                                if (objargs[3] != "edu" && objargs[3] != "camp" && objargs[3] != "trees")
+                                    // If so, add a warning to the warning string.
                                     warningtext += QString("Error at line %1: invalid option type '%2'.\n").arg(linenumber).arg(objargs[3]);
                                 else
                                 {
+                                    // If no errors have been detected so far, begin properly parsing the option data.
+                                    // Create a QDir object to generate the absolute path for the option file/folder.
                                     QDir objpathdir(QCoreApplication::applicationDirPath() + "/../data" + objpath);
-                                    QDir datadir(QCoreApplication::applicationDirPath() + "/../data");
+
+                                    /*QDir datadir(QCoreApplication::applicationDirPath() + "/../data");
                                     if (objpathdir == datadir)
                                         warningtext += QString("Error at line %1: cannot use data folder as an option.\n").arg(linenumber);
                                     else
-                                    {
-                                        o = {linedata[0],objpathdir.absolutePath(),objargs[1],objargs[2],objargs[3]};
-                                        //qDebug() << objpathdir.absolutePath();
-                                        l->addObj(o);
-                                    }
-                                    //QMessageBox::information(0,"Debug info", objpathdir.absolutePath(), QMessageBox::Close, QMessageBox::Close);
+                                    {*/
+
+                                    // Add the data into an OptionObject struct.
+                                    o = {linedata[0],objpathdir.absolutePath(),objargs[1],objargs[2],objargs[3]};
+                                    // Add the OptionObject into the OptionData list.
+                                    l->addObj(o);
                                 }
                             }
                         }
@@ -450,107 +524,173 @@ int MainWindow::readLauncherData(OptionData *l)
             }
         }
 
+        // If we have any options using directories, go through them and check if the directories chosen exist:
         if (l->getListOfDirs().size()>0)
             foreach (OptionObject oo, l->getListOfDirs())
                 if (!dirExists(oo.abspath))
-                    warningtext += QString("Directory error: directory chosen for option '%1' cannot be found. Verify your RTR installation or your data file.\n").arg(oo.displayname);
+                    // If a directory cannot be found, add a warning to the QString.
+                    warningtext += QString("Directory error: directory chosen for option '%1' cannot be found. Verify your RTR installation or your launcher data file.\n").arg(oo.displayname);
 
+        // If we have any options using files, go through them and check if the files chosen exist:
         if (l->getListOfFiles().size()>0)
             foreach (OptionObject fo, l->getListOfFiles())
                 if (!fileExists(fo.abspath))
-                    warningtext += QString("File error: file chosen for option '%1' cannot be found. Verify your RTR installation or your data file.\n").arg(fo.displayname);
+                    // If a file cannot be found, add a warning to the QString.
+                    warningtext += QString("File error: file chosen for option '%1' cannot be found. Verify your RTR installation or your launcher data file.\n").arg(fo.displayname);
 
+        // Check if the warning string is not empty:
         if (!warningtext.isEmpty())
         {
+            // If so, add a small introduction behind the list of errors, and display a warning to the user.
             warningtext = "The following errors were found in the launcher data file:\n\n" + warningtext;
             QMessageBox::warning(this,"Launcher data error!", warningtext, QMessageBox::Close, QMessageBox::Close);
         }
+
+        // Close the QTextStream since we finished using it.
         launcherData.close();
 
+        // Since any errors detected so far are not application-breaking, return an all ok '0'.
         return 0;
     }
+    // If the file was not found, send a critical error.
     else
     {
         QMessageBox::critical(this,"Launcher data error!", "Could not find the data file for the launcher (launcher.dat) in the launcher folder. Check that you have installed RTR correctly"\
                                                     " and not moved any files in the launcher folder.\n\n", QMessageBox::Close, QMessageBox::Close);
+        // Return an error code 404, very cleverly referencing the HTTP error for file not found.
         return 404;
     }
 }
 
-void MainWindow::readPlayerData(QList<PlayerOption> *l)
+// Method to read the player data file.
+void MainWindow::readPlayerData()
 {
+    // Generate the absolute file path for the player data file using the relative path defined in optiondata.h.
     QString playerDataPath = QCoreApplication::applicationDirPath() + playerDataFile;
-    QFile playerData(playerDataPath);
+
+    // Check if the data file exists.
     if (fileExists(playerDataPath))
     {
+        // If it does, create a QFile object pointing to the absolute path of the file.
+        QFile playerData(playerDataPath);
+
+        // Try to open it, and if it doesn't, send a critical error.
         if (!playerData.open(QIODevice::ReadOnly))
             QMessageBox::critical(this,"File not readable", "The player data file could not be read. Please check your RTR installation and make sure the player data file"\
                                                          " is accessible.\n\nError: " + playerData.errorString());
-        else
+
+        // Otherwise, create a QTextStream interface 'in' with a reference to the launcher data file.
+        QTextStream in(&playerData);
+        // Set the codec to UTF-8 for less limited script support.
+        in.setCodec("UTF-8");
+
+        // Initialise an PlayerOption struct to use for appending options to the list of options.
+        PlayerOption o = {"",""};
+
+        // Create a QString to store any possible errors and warnings that come up when reading the file.
+        QString warningtext="";
+        // And a line number counter to keep track of the line in which the errors and warnings were found.
+        uint linenumber=0;
+
+            // Variables used in the file reading loop:
+        // A QString to store the contents of each line.
+        QString line = "";
+        // A list of QStrings to store the different data elements of each option in the file, the type of path (file
+        // or folder) and then the rest.
+        QStringList linedata = {""};
+
+        // While we are still not at the end of the file:
+        while (!in.atEnd())
         {
-            QTextStream in(&playerData);
-            in.setCodec("UTF-8");
-            PlayerOption o = {"",""};
-            QString warningtext="";
-            uint linenumber=0;
-            while (!in.atEnd())
+            // Read the next line and store it in 'line', using simplified() to collapse any whitespace (such as tabs)
+            // to a single space, and then add one to the linenumber counter.
+            line = in.readLine().simplified();
+            linenumber++;
+
+            // Check if the line is not empty, and, if commented with '//', there is something behind the comment, and,
+            // when the line behind the comment (if any) has one ':' character, then:
+            if(line != "" && line.split("//")[0] != "" &&  line.split("//")[0].split(":").size() == 2)
             {
-                QString line = in.readLine().simplified();
-                if(line.split("//")[0]!="" && line!="" && line.split("//")[0].split(":").size()>1)
+                // Split the data behind any comment character ('//') by the character ':'.
+                linedata = line.split("//")[0].split(":");
+
+                // Check if are no characters between the ':' separator:
+                if (linedata[0] == "" || linedata[1] == "")
+                    // If so, add a warning to the warning string.
+                    warningtext += QString("Error at line %1: invalid empty argument.\n").arg(linenumber);
+                else
                 {
-                    QStringList linedata = line.split("//")[0].split(":");
-                    if (linedata[0]=="" || linedata[1]=="")
-                        warningtext += QString("Error at line %1: invalid empty argument.\n").arg(linenumber);
-                    else
+                    // If not, check if the option code behind the ':' matches any checkbox or combobox element.
+                    if (this->findChild<QCheckBox *>(linedata[0]) || this->findChild<QComboBox *>(linedata[0]))
                     {
-                        //qDebug() << linedata[0];
-                        //qDebug() << w->findChild<QObject *>(linedata[0]);
-                        if (this->findChild<QCheckBox *>(linedata[0]) || this->findChild<QComboBox *>(linedata[0]))
+                        // If so, add the data into an OptionObject struct.
+                        o = {linedata[0],linedata[1]};
+                        // Add the PlayerOption into the list of PlayerOption structs.
+                        playeroptionslist.append(o);
+
+                        // If the current player option is a checkbox, then:
+                        if (this->findChild<QCheckBox *>(o.object))
                         {
-                            o = {linedata[0],linedata[1]};
-                            l->append(o);
-                            if (this->findChild<QCheckBox *>(linedata[0]))
-                            {
-                                QCheckBox *uiObject = this->findChild<QCheckBox *>(linedata[0]);
-                                //QMessageBox::warning(0,"Preferences file errors!", uiObject->text(), QMessageBox::Close, QMessageBox::Close);
-                                bool status = false;
-                                if(linedata[1]=="1")
-                                    status = true;
-                                uiObject->setChecked(status);
-                            }
-                            else
-                            {
-                                QComboBox *uiObject = this->findChild<QComboBox *>(linedata[0]);
-                                int indexOption = uiObject->findData(linedata[1]);
-                                //qDebug() << indexOption;
-                                if (linedata[1]!="default")
-                                {
-                                    if(indexOption == -1)
-                                        warningtext += QString("Error at line %1: could not find option %2.\n").arg(linenumber).arg(linedata[1]);
-                                    else
-                                        uiObject->setCurrentIndex(indexOption);
-                                }
-                            }
-                            //qDebug() << status;
+                            // Store the UI element into its own object (this can only be done at this point,
+                            // otherwise an exception is thrown if it turned out the option was not of this type.
+                            QCheckBox *uiObject = this->findChild<QCheckBox *>(o.object);
+
+                            // Make a bool to store whether the status of the checkbox should be checked or not.
+                            bool status = false;
+
+                            // If the setting for the option is '1', change status to reflect this, else keep it False.
+                            if(o.setting == "1")
+                                status = true;
+
+                            // Set the checked status of the checkbox whatever the 'status' variable turned out to be.
+                            uiObject->setChecked(status);
                         }
+                        // If the current player option was not a checkbox (hence is a combobox), then:
                         else
-                            warningtext += QString("Error at line %1: could not find option %2.\n").arg(linenumber).arg(linedata[0]);
+                        {
+                            // Same implementation as above, only the type of child object to find changed.
+                            QComboBox *uiObject = this->findChild<QComboBox *>(linedata[0]);
+
+                            // If the selected option is not the default (which means we don't need to do anything).
+                            if (linedata[1] != "default")
+                            {
+                                // Try to find the index of the selected option in the respective combobox.
+                                int indexOption = uiObject->findData(linedata[1]);
+
+                                // If it cannot find the option in the combobox (it returns -1), add a warning.
+                                if(indexOption == -1)
+                                    warningtext += QString("Error at line %1: could not find option %2.\n").arg(linenumber).arg(linedata[1]);
+                                // Otherwise, if we did find it, set the selected combobox option appropriately.
+                                else
+                                    uiObject->setCurrentIndex(indexOption);
+                            }
+                        }
                     }
+
+                    // If, above, we could not find the option name in any checkbox or combobox, add a warning.
+                    else
+                        warningtext += QString("Error at line %1: could not find option %2.\n").arg(linenumber).arg(linedata[0]);
                 }
-                linenumber++;
             }
-            if (!warningtext.isEmpty())
-            {
-                warningtext = "The following errors were found in the player data file:\n\n" + warningtext;
-                QMessageBox::warning(this,"Player data errors!", warningtext, QMessageBox::Close, QMessageBox::Close);
-            }
-            playerData.close();
         }
+
+        // Check if the warning string is not empty:
+        if (!warningtext.isEmpty())
+        {
+            // If so, add a small introduction behind the list of errors, and display a warning to the user.
+            warningtext = "The following errors were found in the player data file:\n\n" + warningtext;
+            QMessageBox::warning(this,"Player data errors!", warningtext, QMessageBox::Close, QMessageBox::Close);
+        }
+
+        // Close the QTextStream since we finished using it.
+        playerData.close();
     }
+
+    // If the file was not found, generate a new one from the default settings and save it to disk.
     else
     {
-        //qDebug() << "no player file";
-        writePlayerData(defaultPlayerDat);
+        QString playerdatatext = playerDataTextGen();
+        writePlayerData(playerdatatext);
     }
 }
 
