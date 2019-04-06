@@ -25,7 +25,7 @@ Download the contents of the `release` folder and paste the _contents_ into your
 
 ### Additional Credits
 * The Rome: Total Realism VIII Logo: [lanjane](https://gitlab.rtrproject.com/Lanjane).
-* The [Europa Barbarorum 1](https://www.europabarbarorum.com/EB1/) team's Trivial Script launcher for showing what a good mod launcher could do.
+* The [Europa Barbarorum 1](https://www.europabarbarorum.com/EB1/) team's Trivial Script launcher for showing what a good Rome: Total mod launcher could be capable of.
 
 ### License
 This software was created using Qt 5.12.2 and is licensed under the GNU General Public License version 3. See the license file for details.
