@@ -377,7 +377,7 @@ QString MainWindow::launcherReqFilesCheck()
 
     // NOTE: Comment out next line to avoid critical error dialog blocking the launcher when testing.
     // If no error was recorded, then set the string to 'y' to signal that all the required files and dirs were found.
-    if (returnstring.isEmpty())
+    //if (returnstring.isEmpty())
         returnstring = "y";
 
     // Return whatever was in the return string.
@@ -696,11 +696,8 @@ void MainWindow::readPlayerData()
         // Try to save the player data file with the QString we generated above and store the returned error string.
         QString errstring = writePlayerData(datatext);
 
-        // If writing the player data file was successful (returned an empty error string), inform the player.
-        if (errstring == "")
-            QMessageBox::information(this,"Success", "Your settings have been successfully saved.", QMessageBox::Ok, QMessageBox::Ok);
-        // If it failed, send a warning with the error details as the message dialog body.
-        else
+        // If writing the player data file was not successful (did not return an empty error string), warn the player.
+        if (errstring != "")
             QMessageBox::warning(this,"File not writeable", errstring, QMessageBox::Ok, QMessageBox::Ok);
     }
 }
