@@ -150,9 +150,6 @@ void MainWindow::on_launchButton_clicked()
     // Disable the launcher button as soon as it is clicked to prevent accidentally launching the game multiple times.
     ui->launchButton->setEnabled(false);
 
-    // Generate the player data file contents.
-    QString dataText = playerDataTextGen();
-
     // Bool variable to let the launcher know it should go ahead with the launching of the game.
     // Defaulted to true, made false in case there is an error on the way.
     bool goahead = true;
@@ -167,14 +164,20 @@ void MainWindow::on_launchButton_clicked()
             goahead = false;
     }*/
 
-    // If writing the player data file was not successful (did not return an all ok '0'), then warn the player.
-    if(writePlayerData(dataText) != 0)
+    // Generate the player data file contents with the user-selected settings in the launcher.
+    QString dataText = playerDataTextGen();
+
+    // Try to save the player data file with the QString we generated above and store the returned error string.
+    QString errstring = writePlayerData(dataText);
+
+    // If writing the player data file was not successful (did not return an empty error string), then:
+    if(errstring != "")
     {
         // Make a QMessageBox StandardButton object that will store the button the user pressed.
         QMessageBox::StandardButton confirm;
         // Create a message box asking the player to confirm if they want to continue launching the game even though
         // their settings could not be saved, with the default button (when pressing enter) being no.
-        confirm = QMessageBox::warning(this,"Continue launching?", "Your configuration could not be saved, and will be discarded if you launch the game.\n"\
+        confirm = QMessageBox::warning(this,"Continue launching?", errstring + "\n\nYour configuration could not be saved, and will be discarded if you launch the game.\n"\
                              "Do you wish to continue launching the game?", QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
         // If the button pressed was the 'No' button:
         if (confirm == QMessageBox::No)
@@ -283,8 +286,15 @@ void MainWindow::on_saveButton_clicked()
     // Generate the player data file contents with the user-selected settings in the launcher.
     QString dataText = playerDataTextGen();
 
-    // Then save the player data file with the QString we generated above.
-    writePlayerData(dataText);
+    // Try to save the player data file with the QString we generated above and store the returned error string.
+    QString errstring = writePlayerData(dataText);
+
+    // If writing the player data file was successful (returned an empty error string), inform the player.
+    if (errstring == "")
+        QMessageBox::information(this,"Success", "Your settings have been successfully saved.", QMessageBox::Ok, QMessageBox::Ok);
+    // If it failed, send a warning with the error details as the message dialog body.
+    else
+        QMessageBox::warning(this,"File not writeable", errstring, QMessageBox::Ok, QMessageBox::Ok);
 }
 
 // Slot for the discard settings button.
@@ -354,29 +364,20 @@ QString MainWindow::launcherReqFilesCheck()
     // both require the file path parameter to be an absolute path.
     if (!fileExists(QCoreApplication::applicationDirPath() + "/../../RomeTW-ALX.exe"))
         returnstring += "The Rome: Total War - Alexander executable was not found. Make sure you have installed RTR correctly,"\
-                    "and that the launcher is in the location \n[RTW install folder]/[RTR mod folder]/[launcher folder]/RTRLauncher.exe.";
+                    "and that the launcher is in the location \n[RTW install folder]/[RTR mod folder]/[launcher folder]/RTRLauncher.exe.\n\n";
 
     // If the mod data folder was not found, add an error message to the string.
     if (!dirExists(QCoreApplication::applicationDirPath() + "/../data"))
-    {
-        // If the string is not empty, add two lines to separate the messages
-        if (!returnstring.isEmpty())
-            returnstring += "\n\n";
-        returnstring += "The RTR data folder was not found. Make sure you have installed RTR correctly";
-    }
+        returnstring += "The RTR data folder was not found. Make sure you have installed RTR correctly\n\n";
+
     // If the launcher data file was not found, add an error message to the string.
     if (!fileExists(QCoreApplication::applicationDirPath() + launcherDataFile))
-    {
-        // If the string is not empty, add two lines to separate the messages
-        if (!returnstring.isEmpty())
-            returnstring += "\n\n";
         returnstring += "Could not find the data file for the launcher (launcher.dat) in the launcher folder. Check that you have installed RTR correctly"\
-                    " and not moved any files in the launcher folder.";
-    }
+                    " and not moved any files in the launcher folder.\n\n";
 
     // NOTE: Comment out next line to avoid critical error dialog blocking the launcher when testing.
     // If no error was recorded, then set the string to 'y' to signal that all the required files and dirs were found.
-    //if (returnstring.isEmpty())
+    if (returnstring.isEmpty())
         returnstring = "y";
 
     // Return whatever was in the return string.
@@ -686,11 +687,21 @@ void MainWindow::readPlayerData()
         playerData.close();
     }
 
-    // If the file was not found, generate a new one from the default settings and save it to disk.
+    // If the file was not found, then:
     else
     {
-        QString playerdatatext = playerDataTextGen();
-        writePlayerData(playerdatatext);
+        // Generate the player data file contents with the default settings.
+        QString datatext = playerDataTextGen();
+
+        // Try to save the player data file with the QString we generated above and store the returned error string.
+        QString errstring = writePlayerData(datatext);
+
+        // If writing the player data file was successful (returned an empty error string), inform the player.
+        if (errstring == "")
+            QMessageBox::information(this,"Success", "Your settings have been successfully saved.", QMessageBox::Ok, QMessageBox::Ok);
+        // If it failed, send a warning with the error details as the message dialog body.
+        else
+            QMessageBox::warning(this,"File not writeable", errstring, QMessageBox::Ok, QMessageBox::Ok);
     }
 }
 
@@ -921,7 +932,7 @@ int MainWindow::checkMapRwm()
     else
     {
         QMessageBox::critical(this,"Critical error!", "The base campaign folder was not found. Make sure you have installed RTR correctly,"\
-                                              "and that the launcher is in the location \n[RTW install folder]/[RTR mod folder]/[launcher folder]/RTRLauncher.exe.\n\n", QMessageBox::Close, QMessageBox::Close);
+                                              "and that the launcher is in the location \n[RTW install folder]/[RTR mod folder]/[launcher folder]/RTRLauncher.exe.", QMessageBox::Close, QMessageBox::Close);
         return 403;
     }
 }
@@ -937,14 +948,13 @@ void MainWindow::resetChecks()
 }
 
 // Write data and launch game methods.
-int MainWindow::writePlayerData(QString dataToWrite)
+QString MainWindow::writePlayerData(QString dataToWrite)
 {
     QFile playerData(QCoreApplication::applicationDirPath() + playerDataFile);
     if (!playerData.open(QIODevice::WriteOnly | QIODevice::Truncate))
     {
-        QMessageBox::critical(this,"File not writeable", "The player data file could not be written. Please check your RTR installation and make sure the player data file"\
-                                                     " is accessible.\n\nError: " + playerData.errorString());
-        return 400;
+        return QString("The player data file could not be written. Please check your RTR installation and make sure the player data file"\
+                                                     " is accessible.\nError: " + playerData.errorString());
     }
     else
     {
@@ -952,8 +962,7 @@ int MainWindow::writePlayerData(QString dataToWrite)
         out.setCodec("UTF-8");
         out << dataToWrite;
         playerData.close();
-        QMessageBox::information(this,"Success", "Your settings have been successfully saved.", QMessageBox::Ok, QMessageBox::Ok);
-        return 0;
+        return "";
     }
 }
 

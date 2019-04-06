@@ -115,7 +115,7 @@ private:
 
         // Write data and launch game methods.
     // Method to write to the player data file.
-    int writePlayerData(QString dataToWrite);
+    QString writePlayerData(QString dataToWrite);
 
     // Method to perform the switch between different campaigns, EDUs, and trees options.
     QString filefolderSwitch(QComboBox *combobox, QList<OptionObject> launcheroptionslist);
