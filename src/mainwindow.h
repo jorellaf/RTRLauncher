@@ -95,10 +95,10 @@ private:
     QString playerDataTextGen();
 
     // Method to read the mod's RTW preferences.txt file.
-    void readPreferences();
+    int readPreferences();
 
     // Method to add the available options of the launcher data file to their respective comboboxes.
-    void setOptions(OptionData *l, QComboBox *combobox, QString optiontypelocal);
+    void setOptions(OptionData *l, QComboBox *combobox, QString optiontypestring, QString defaultname = "Default");
 
 
         // Checking data methods:

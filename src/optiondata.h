@@ -7,25 +7,25 @@
 #endif
 
 // Define the path of the launcher data file as being in the same folder as the launcher executable.
-#ifndef launcherDataFile
-#define launcherDataFile "/launcher.dat"
+#ifndef launcherDataFilePath
+#define launcherDataFilePath "/launcher.dat"
 #endif
 
 // Define the path of the player data file as being in the same folder as the launcher executable.
-#ifndef playerDataFile
-#define playerDataFile "/player.dat"
+#ifndef playerDataFilePath
+#define playerDataFilePath "/player.dat"
 #endif
 
 // Define the path of the mod's RTW preferences file assuming the user has correctly installed the launcher in
 // [RTW/MODFOLDER/Launcher].
-#ifndef preferencesFile
-#define preferencesFile "/../preferences/preferences.txt"
+#ifndef preferencesFilePath
+#define preferencesFilePath "/../preferences/preferences.txt"
 #endif
 
 // Define the default player data file that will be generated if none is found. The checkboxes in the main window are
 // hardcoded options that would need changing here if altered.
-#ifndef defaultPlayerDat
-#define defaultPlayerDat ""\
+#ifndef defaultPlayerData
+#define defaultPlayerData ""\
     "// ------------------------------------------------------------------------------------------------------------\n"\
     "// Start options checkboxes\n"\
     "showerrBox:1\n"\
@@ -176,7 +176,7 @@ struct OptionObject
 // Create a struct to handle the options the player has selected in a previous run of the launcher (TODO: refactor).
 struct PlayerOption
 {
-    QString object; // The code of the object in question.
+    QString option; // The code of the object in question.
     QString setting; // The setting of the selected object (e.g. true or false).
 };
 

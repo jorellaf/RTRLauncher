@@ -91,7 +91,7 @@ void PreferencesDialog::on_defaultsButton_clicked()
 
 int PreferencesDialog::writePreferences(QString dataToWrite)
 {
-    QFile preferencesData(QCoreApplication::applicationDirPath() + preferencesFile);
+    QFile preferencesData(QCoreApplication::applicationDirPath() + preferencesFilePath);
     if (!preferencesData.open(QIODevice::WriteOnly | QIODevice::Truncate))
     {
         QMessageBox::critical(this,"File not writeable", "The preferences file could not be written. Please check your RTR installation and make sure the preferences file"\

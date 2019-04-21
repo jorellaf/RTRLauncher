@@ -94,12 +94,13 @@ int MainWindow::startSetup()
     // Find the QComboBox object for the campaign options combobox.
     QComboBox *campComboBox = this->findChild<QComboBox*>("campComboBox");
     // Call the setOptions method with the reference to our launcheroptionslist object containing the options from the
-    // launcher data file, the QComboBox to be filled, and the string of the option type used in the launcher.dat file.
-    setOptions(&launcheroptionslist, campComboBox, "camp");
+    // launcher data file, the QComboBox to be filled, the string of the option type used in the launcher.dat file, and
+    // a string to override the name of the default option to be slightly more descriptive.
+    setOptions(&launcheroptionslist, campComboBox, "camp", "RTR Main Campaign");
 
     // Fill combobox of unit roster (export_descr_unit.txt, EDU) options with the data from the launcher data file.
     QComboBox *eduComboBox = this->findChild<QComboBox*>("eduComboBox");
-    // See previous setOptions call comment.
+    // See previous setOptions call comment (without default name override).
     setOptions(&launcheroptionslist, eduComboBox, "edu");
 
     // Fill combobox of trees options with the data from the launcher data file.
@@ -371,13 +372,13 @@ QString MainWindow::launcherReqFilesCheck()
         returnstring += "The RTR data folder was not found. Make sure you have installed RTR correctly\n\n";
 
     // If the launcher data file was not found, add an error message to the string.
-    if (!fileExists(QCoreApplication::applicationDirPath() + launcherDataFile))
+    if (!fileExists(QCoreApplication::applicationDirPath() + launcherDataFilePath))
         returnstring += "Could not find the data file for the launcher (launcher.dat) in the launcher folder. Check that you have installed RTR correctly"\
                     " and not moved any files in the launcher folder.\n\n";
 
     // NOTE: Comment out next line to avoid critical error dialog blocking the launcher when testing.
     // If no error was recorded, then set the string to 'y' to signal that all the required files and dirs were found.
-    //if (returnstring.isEmpty())
+    if (returnstring.isEmpty())
         returnstring = "y";
 
     // Return whatever was in the return string.
@@ -390,25 +391,26 @@ QString MainWindow::launcherReqFilesCheck()
 int MainWindow::readLauncherData(OptionData *l)
 {
     // Generate the absolute file path for the launcher data file using the relative path defined in optiondata.h.
-    QString launcherdatafilepath = QCoreApplication::applicationDirPath() + launcherDataFile;
+    QString launcherdatafilepath = QCoreApplication::applicationDirPath() + launcherDataFilePath;
 
     // Check if the data file exists.
     if (fileExists(launcherdatafilepath))
     {
         // If it does, create a QFile object pointing to the absolute path of the file.
-        QFile launcherData(launcherdatafilepath);
+        QFile launcherdata(launcherdatafilepath);
 
         // Try to open it, and if it doesn't, send a critical error and return an error code.
-        if (!launcherData.open(QIODevice::ReadOnly | QIODevice::Text))
+        if (!launcherdata.open(QIODevice::ReadOnly | QIODevice::Text))
         {
             QMessageBox::critical(this,"File not readable", "The data file could not be read. Please check your RTR installation and make sure the data"\
-                                                         " is accessible.\n\nError: " + launcherData.errorString());
+                                                         " is accessible.\n\nError: " + launcherdata.errorString());
+            // Very cleverly referencing the HTTP error code for Bad Request.
             return 400;
         }
 
         // Otherwise, create a QTextStream interface 'in' with a reference to the launcher data file.
-        QTextStream in(&launcherData);
-        // Set the codec to UTF-8 for less limited script support.
+        QTextStream in(&launcherdata);
+        // Set the encoding to UTF-8 for less limited script support.
         in.setCodec("UTF-8");
 
         // Initialise an OptionObject struct to use for appending options to the list of options.
@@ -416,7 +418,7 @@ int MainWindow::readLauncherData(OptionData *l)
 
         // Create a QString to store any possible errors and warnings that come up when reading the file.
         QString warningtext="";
-        // And a line number counter to keep track of the line in which the errors and warnings were found.
+        // And an unsigned line number counter to keep track of the line in which the errors and warnings were found.
         uint linenumber=0;
 
             // Variables used in the file reading loop:
@@ -547,8 +549,8 @@ int MainWindow::readLauncherData(OptionData *l)
             QMessageBox::warning(this,"Launcher data error!", warningtext, QMessageBox::Close, QMessageBox::Close);
         }
 
-        // Close the QTextStream since we finished using it.
-        launcherData.close();
+        // Close the QFile since we finished using it.
+        launcherdata.close();
 
         // Since any errors detected so far are not application-breaking, return an all ok '0'.
         return 0;
@@ -567,22 +569,22 @@ int MainWindow::readLauncherData(OptionData *l)
 void MainWindow::readPlayerData()
 {
     // Generate the absolute file path for the player data file using the relative path defined in optiondata.h.
-    QString playerDataPath = QCoreApplication::applicationDirPath() + playerDataFile;
+    QString playerdatapath = QCoreApplication::applicationDirPath() + playerDataFilePath;
 
     // Check if the data file exists.
-    if (fileExists(playerDataPath))
+    if (fileExists(playerdatapath))
     {
         // If it does, create a QFile object pointing to the absolute path of the file.
-        QFile playerData(playerDataPath);
+        QFile playerdatafile(playerdatapath);
 
         // Try to open it, and if it doesn't, send a critical error.
-        if (!playerData.open(QIODevice::ReadOnly))
+        if (!playerdatafile.open(QIODevice::ReadOnly))
             QMessageBox::critical(this,"File not readable", "The player data file could not be read. Please check your RTR installation and make sure the player data file"\
-                                                         " is accessible.\n\nError: " + playerData.errorString());
+                                                         " is accessible.\n\nError: " + playerdatafile.errorString());
 
         // Otherwise, create a QTextStream interface 'in' with a reference to the launcher data file.
-        QTextStream in(&playerData);
-        // Set the codec to UTF-8 for less limited script support.
+        QTextStream in(&playerdatafile);
+        // Set the encoding to UTF-8 for less limited script support.
         in.setCodec("UTF-8");
 
         // Initialise an PlayerOption struct to use for appending options to the list of options.
@@ -590,7 +592,7 @@ void MainWindow::readPlayerData()
 
         // Create a QString to store any possible errors and warnings that come up when reading the file.
         QString warningtext="";
-        // And a line number counter to keep track of the line in which the errors and warnings were found.
+        // And an unsigned line number counter to keep track of the line in which the errors and warnings were found.
         uint linenumber=0;
 
             // Variables used in the file reading loop:
@@ -615,7 +617,7 @@ void MainWindow::readPlayerData()
                 // Split the data behind any comment character ('//') by the character ':'.
                 linedata = line.split("//")[0].split(":");
 
-                // Check if are no characters between the ':' separator:
+                // Check if there is no text either behind or in front of the ':' separator:
                 if (linedata[0] == "" || linedata[1] == "")
                     // If so, add a warning to the warning string.
                     warningtext += QString("Error at line %1: invalid empty argument.\n").arg(linenumber);
@@ -630,11 +632,11 @@ void MainWindow::readPlayerData()
                         playeroptionslist.append(o);
 
                         // If the current player option is a checkbox, then:
-                        if (this->findChild<QCheckBox *>(o.object))
+                        if (this->findChild<QCheckBox *>(o.option))
                         {
                             // Store the UI element into its own object (this can only be done at this point,
                             // otherwise an exception is thrown if it turned out the option was not of this type.
-                            QCheckBox *uiObject = this->findChild<QCheckBox *>(o.object);
+                            QCheckBox *uiObject = this->findChild<QCheckBox *>(o.option);
 
                             // Make a bool to store whether the status of the checkbox should be checked or not.
                             bool status = false;
@@ -683,8 +685,8 @@ void MainWindow::readPlayerData()
             QMessageBox::warning(this,"Player data errors!", warningtext, QMessageBox::Close, QMessageBox::Close);
         }
 
-        // Close the QTextStream since we finished using it.
-        playerData.close();
+        // Close the QFile since we finished using it.
+        playerdatafile.close();
     }
 
     // If the file was not found, then:
@@ -702,10 +704,15 @@ void MainWindow::readPlayerData()
     }
 }
 
+// Method to generate the text of the player data file.
 QString MainWindow::playerDataTextGen()
 {
+    // Self-explanatory. QString to store the data as we generate it.
     QString dataText = "// ------------------------------------------------------------------------------------------------------------\n"\
             "// Start options checkboxes\n";
+    // To pass the state of the checkbox as checked (1) or unchecked (0), we form a QString with a %1 placerholder for
+    // the parameter we pass with arg(). The syntax (Bool ? "1" : "0") checks a boolean and assigns a value for the
+    // true or false check inline. If the checkbox is checked (hence == true), write '1'; if false, write '0'.
     dataText += QString("showerrBox:%1").arg(ui->showerrBox->isChecked() ? "1" : "0") + "\n";
     dataText += QString("neBox:%1").arg(ui->neBox->isChecked() ? "1" : "0") + "\n";
     dataText += QString("nmBox:%1").arg(ui->nmBox->isChecked() ? "1" : "0") + "\n";
@@ -740,147 +747,267 @@ QString MainWindow::playerDataTextGen()
     return dataText;
 }
 
-void MainWindow::readPreferences()
+// Method to read the mod's RTW preferences.txt file.
+int MainWindow::readPreferences()
 {
+    // NOTE: Maybe use QPairs here?
+    // A QVector of PlayerOption structs to store the max resolutions.
     QVector<PlayerOption> maxresolutions;
-    PlayerOption po = {"STRATEGY_MAX_RESOLUTION",maxres};
-    maxresolutions.append(po);
-    po.object = "BATTLE_MAX_RESOLUTION";
+
+    // A PlayerOption struct to append to the QVector above, initialised to the strategy map max resolution.
+    PlayerOption po = {"STRATEGY_MAX_RESOLUTION", maxres};
+    // Append the PlayerOption struct to the QVector.
     maxresolutions.append(po);
 
-    QString prefPath = QCoreApplication::applicationDirPath() + preferencesFile;
+    // Change the PlayerOption struct to the battle map max resolution and append.
+    po.option = "BATTLE_MAX_RESOLUTION";
+    maxresolutions.append(po);
+
+    // Generate the absolute file path for the RTW preferences file using the relative path defined in optiondata.h.
+    QString prefpath = QCoreApplication::applicationDirPath() + preferencesFilePath;
+    // Generate the absolute path for the RTW preferences directory.
     QString prefFolder = QCoreApplication::applicationDirPath() + "/../preferences";
-    QDir preferencesDir(prefFolder);
+
+    // Check if the preferences directory does not exist yet.
     if (!dirExists(prefFolder))
     {
+        // If so, make a QDir object pointing to the preferences folder, create the directory, and check if it failed.
+        QDir preferencesDir(prefFolder);
         if(!preferencesDir.mkdir(prefFolder))
         {
-            QMessageBox::critical(this,"Folder creation error", "The preferences folder is missing and could not be created. Please try again or create the folder '[RomeTW folder]/[RTR folder]/preferences/' manually.");
-            prefsdialog->close();
-            return;
+            // If so, alert the player.
+            QMessageBox::critical(this, "Folder creation error", "The preferences folder is missing and could not be created. Please try again or create the folder '[RomeTW folder]/[RTR folder]/preferences/' manually.",\
+                                 QMessageBox::Close, QMessageBox::Close);
+
+            // Since we cannot do anything with the preferences dialog if we cannot even create the preferences
+            // folder, return an error code 403, very cleverly referencing the HTTP error code for Forbidden.
+            return 403;
         }
     }
-    QFile prefData(prefPath);
-    //qDebug() << prefPath;
-    if (prefData.exists())
+
+    // Check if the preferences file does not exists.
+    if (!fileExists(prefpath))
     {
-        if (!prefData.open(QIODevice::ReadWrite))
-            QMessageBox::critical(this,"File not readable", "The preferences file could not be read. Please check your RTR installation and make sure the preferences file"\
-                                                         " is accessible.\n\nError: " + prefData.errorString());
-        else
+        // If so, try to write the default preferences file, and if it is not successful, alert the player.
+        if (prefsdialog->writePreferences(defaultPreferencesData) != 0)
         {
-            // NOTE: Maybe use QPairs here?
-            QString preferencesData = "";
-            QTextStream in(&prefData);
-            in.setCodec("UTF-8");
-            QString warningtext="";
-            uint linenumber=0;
-            bool needsupdate = false;
-            while (!in.atEnd())
+            QMessageBox::critical(this, "Folder creation error", "The preferences file could not be created. Please try again.",\
+                                 QMessageBox::Close, QMessageBox::Close);
+            // Since we cannot do anything with the preferences dialog if we cannot even create the preferences file,
+            // return an error code 403, very cleverly referencing the HTTP error code for Forbidden.
+            return 403;
+        }
+    }
+
+    // Make a QFile object pointing to the preferences file.
+    QFile preffile(prefpath);
+
+    // Check if the file cannot be opened for reading and writing.
+    if (!preffile.open(QIODevice::ReadWrite))
+    {
+        // If so, alert the player.
+        QMessageBox::critical(this,"File not readable", "The preferences file could not be read. Please check your RTR installation and make sure the preferences file"\
+                                                     " is accessible.\n\nError: " + preffile.errorString());
+        // Since we cannot do anything with the preferences dialog if we cannot even open the preferences file, return
+        // an error code 403, very cleverly referencing the HTTP error code for Forbidden.
+        return 403;
+    }
+
+    // Otherwise, create a QTextStream interface 'in' with a reference to the preferences data file QFile object.
+    QTextStream in(&preffile);
+    // Set the encoding to UTF-8 for less limited script support.
+    in.setCodec("UTF-8");
+
+    // A QString to store the contents of the file line-by-line as we go through it.
+    QString prefcontents = "";
+
+    // Create a QString to store any possible errors and warnings that come up when reading the file.
+    QString warningtext="";
+    // And an unsigned line number counter to keep track of the line in which the errors and warnings were found.
+    uint linenumber=0;
+
+        // Variables used in the file reading loop:
+    // A QString to store the contents of each line.
+    QString line = "";
+    // A list of QStrings to store the different data elements of each option in the file, the type of path (file
+    // or folder) and then the rest.
+    QStringList linedata = {""};
+    // A bool to signal whether the preferences.txt file needs to be updated, or can remain as is.
+    bool needsupdate = false;
+
+    // While we are still not at the end of the file:
+    while (!in.atEnd())
+    {
+        // Read the next line and store it in 'line', using simplified() to collapse any whitespace (such as tabs)
+        // to a single space, and then add one to the linenumber counter.
+        line = in.readLine().simplified();
+        linenumber++;
+
+        // Check if the line is not empty, and has at least one ':' character, then:
+        if(line != "" && line.split(":").size() > 1)
+        {
+            // Split the data by the character ':'.
+            linedata = line.split(":");
+
+            // Check if there is no text either behind or in front of the ':' separator:
+            if (linedata[0] == "" || linedata[1] == "")
+                // If so, add a warning to the warning string.
+                warningtext += QString("Error at line %1: invalid empty argument.\n").arg(linenumber);
+            else
             {
-                QString line = in.readLine().simplified();
-                if(line!="" && line.split(":").size()>1)
+                // If not, check if the text behind the ':' matches either the maximum strategic map or battle map
+                // resolution option code (as stored in the maxresolutions object).
+                if (linedata[0] == maxresolutions.at(0).option || linedata[0] == maxresolutions.at(1).option)
                 {
-                    QStringList linedata = line.split("//")[0].split(":");
-                    if (linedata[0]=="" || linedata[1]=="")
-                        warningtext += QString("Error at line %1: invalid empty argument.\n").arg(linenumber);
-                    else
+                    // If so, check if the settings in the file match the maximum resolution we have defined.
+                    if (linedata[1] != maxres)
                     {
-                        //qDebug() << linedata[0];
-                        //qDebug() << w->findChild<QObject *>(linedata[0]);
-                        if (linedata[0]==maxresolutions.at(0).object || linedata[0]==maxresolutions.at(1).object)
+                        // If so, modify the line in question to set the maximum resolution, and signal to update the file.
+                        prefcontents += linedata[0] + ":" + maxres + "\n";
+                        needsupdate = true;
+                    }
+                }
+
+                // If the line did not have anything to do with the strategy map or battle map resolution, then:
+                else
+                {
+                    // Add the line to the rest of the lines already stored, since we won't edit it at this point.
+                    prefcontents += line + "\n";
+
+                    // If there is a checkbox in the preferences dialog that matches the option in the line, then:
+                    if (prefsdialog->findChild<QCheckBox *>(linedata[0]))
+                    {
+                        // Get the QCheckBox object of the option in question
+                        QCheckBox *optioncheckbox = prefsdialog->findChild<QCheckBox *>(linedata[0]);
+                        // TODO: Refactor modifier capture.
+                        // Get a QList of bools of the modifiers for the checkbox statuses (for more information, see
+                        // preferencesDialog class and the getMods method).
+                        QList<bool> modifiers = prefsdialog->getMods();
+
+                        // Store the 'real' status of the option in the preferences file as a bool. The syntax
+                        // (Bool ? "1" : "0") checks a boolean and assigns a value for thetrue or false check inline.
+                        // If the data in this line after the ':' reads 'TRUE', assign a boolean true, and viceversa.
+                        bool realstatus =  linedata[1] == "TRUE" ? true : false;
+
+                        // Convoluted way to mask the true status with the modifier.
+                        // Get a QList of all the QCheckBox objects in the preferences dialog.
+                        QList<QCheckBox *> listofboxes = prefsdialog->getListPrefs();
+
+                        // For each QCheckBox object in the list:
+                        foreach (QCheckBox *cb, listofboxes)
                         {
-                            preferencesData += linedata[0] + ":" + maxres + "\n";
-                            if (linedata[1]!=maxres)
-                                needsupdate = true;
-                        }
-                        else
-                        {
-                            //qDebug() << linedata[0];
-                            if (prefsdialog->findChild<QCheckBox *>(linedata[0]))
+                            // If the name of the object is identical to the option in the line, then:
+                            if (cb->objectName() == linedata[0])
                             {
-                                QCheckBox *uiObject = prefsdialog->findChild<QCheckBox *>(linedata[0]);
-                                QList<bool> modifiers = prefsdialog->getMods();
-                                QList<QCheckBox *> listofboxes = prefsdialog->getListPrefs();
-                                int i=0;
-                                bool status = false;
-                                if(linedata[1]=="TRUE")
-                                    status = true;
-                                bool moddedstatus=false;
-                                foreach (QCheckBox *cb, listofboxes)
-                                {
-                                    if (cb->objectName()==uiObject->objectName())
-                                        moddedstatus = status == modifiers.at(i);
-                                        i++;
-                                }
-                                uiObject->setChecked(moddedstatus);
+                                // The value of modstatus is an XNOR (==) between the real status and the modifier.
+                                bool modstatus = realstatus == modifiers.at(listofboxes.indexOf(cb));
+                                // The checked status of the option checkbox for the option in the current line is set
+                                // according to the value of modstatus.
+                                optioncheckbox->setChecked(modstatus);
+                                // No need to keep checking the remaining QCheckBox objects anymore, so break.
+                                break;
                             }
-                            //qDebug() << status;
-                            preferencesData += line + "\n";
                         }
                     }
                 }
-                else
-                    preferencesData += line + "\n";
             }
-            if (needsupdate)
-            {
-                prefData.resize(0);
-                QTextStream out(&prefData);
-                in.setCodec("UTF-8");
-                out << preferencesData;
-            }
-            prefsdialog->preferencesText = preferencesData;
-            //qDebug() << p->preferencesText;
-            //qDebug() << preferencesData;
-            if (!warningtext.isEmpty())
-            {
-                warningtext = "The following errors were found in the player data file:\n\n" + warningtext;
-                QMessageBox::warning(this,"Preferences file errors!", warningtext, QMessageBox::Close, QMessageBox::Close);
-            }
-            prefData.close();
         }
+
+        // Else, if the line is empty or has not ':' character, simply add the line to the rest of the file contents.
+        else
+            prefcontents += line + "\n";
     }
-    else
+    // Reached the end of the preferences data file.
+
+    // If we need to update the preferences file, then:
+    if (needsupdate)
     {
-        //qDebug() << "no preferences file";
-        prefsdialog->writePreferences(defaultPreferencesData);
+        // Empty the contents of the preferences file.
+        preffile.resize(0);
+
+        // Create a QTextStream interface 'out' with a reference to the preferences data file QFile object.
+        QTextStream out(&preffile);
+
+        // Set the encoding to UTF-8 for less limited script support.
+        out.setCodec("UTF-8");
+
+        // Put the modified contents to store into the QTextStream (and therefore, the preferences file).
+        out << prefcontents;
     }
+
+    // Save the modified contents of the preferences file into the respective variable of the preferencesDialog class.
+    prefsdialog->preferencesText = prefcontents;
+
+    // Check if the warning string is not empty:
+    if (!warningtext.isEmpty())
+    {
+        // If so, add a small introduction behind the list of errors, and display a warning to the user.
+        warningtext = "The following errors were found in the preferences file:\n\n" + warningtext;
+        QMessageBox::warning(this,"Preferences file errors!", warningtext, QMessageBox::Close, QMessageBox::Close);
+    }
+
+    // Close the QFile since we finished using it.
+    preffile.close();
+
+    // Since any errors detected so far are not application-breaking, return an all ok '0'.
+    return 0;
 }
 
-void MainWindow::setOptions(OptionData *l, QComboBox *combobox, QString optiontypelocal)
+// Method to add the available options of the launcher data file to their respective comboboxes.
+// Takes as parameters a pointer to an OptionData class with all the data for the combobox, the pointer to the combobox
+// UI element, a QString with the code of the option type, and a QString for the name of the default option.
+void MainWindow::setOptions(OptionData *l, QComboBox *combobox, QString optiontypestring, QString defaultname)
 {
-    QString defaultname = "Default";
-    if (optiontypelocal=="camp")
-        defaultname = "RTR Main Campaign";
-    if (l->getListByOptionType(optiontypelocal).size()==0)
+    // Get the list of launcher options for the current option type.
+    QList<OptionObject> optionslist = l->getListByOptionType(optiontypestring);
+
+    // If there are no options for the current option type (the size of the list is 0), then:
+    if (optionslist.size() == 0)
     {
-        combobox->addItem(defaultname,"default");
+        // Add a default option to the combobox with the text of the default name initialised in the header, or, the
+        // one passed to the method as an argument, and 'default' for the hidden data for that option.
+        combobox->addItem(defaultname, "default");
         combobox->setEnabled(false);
     }
+    // Else, if there is at least one option for the current option type, then:
     else
     {
-        foreach (OptionObject optionobj, l->getListByOptionType(optiontypelocal))
+        // Loop through each OptionObject struct, and:
+        foreach (OptionObject o, optionslist)
         {
-            combobox->addItem(optionobj.displayname,optionobj.optioncode);
+            // Add a new item to the combobox with the option code as the hidden data for that combobox option.
+            combobox->addItem(o.displayname, o.optioncode);
         }
     }
 }
 
 // Checking data methods:
+// Method to check whether the user's configuration is different from the defaults.
 bool MainWindow::checkDefaults()
 {
-    // TODO: Expand to include comboboxes
-    bool checked = true;
+    // TODO: Expand to include comboboxes?
+    // Bool variable to return whether the current settings in the launcher are the same as the defaults.
+    bool defaultsset = true;
+
+    // Loop through each checkbox UI element in the launcher by using a private QList of QCheckBoxes, and:
     foreach (QCheckBox *c, checkboxeslist)
     {
-        if (c->objectName()!="showerrBox")
-                checked = checked && !c->checkState();
+        // If the checkbox is not the show_err checkbox (found by checking the object name), then:
+        if (c->objectName() != "showerrBox")
+            // Set the checked variable to the result of defaultsset AND the negation of the checked status of the
+            // checkbox. This makes it so that all the checkboxes except the show_err one are unchecked by default.
+            defaultsset = defaultsset && !c->checkState();
+        // Else, if the checkbox is the show_err checkbox, then:
+        else
+            // See above, but the checked status is not negated; meaning the show_err box should be checked by default.
+            defaultsset = defaultsset && c->checkState();
     }
-    checked = checked && ui->showerrBox->checkState();
-    return checked;
+
+    // Return the boolean variable.
+    return defaultsset;
 }
 
+// Method to check whether the map.rwm file is up to date to the rest of the contents of the other map files.
 int MainWindow::checkMapRwm()
 {
     QDir basefolder(QCoreApplication::applicationDirPath() + "/../data/world/maps/base");
@@ -947,7 +1074,7 @@ void MainWindow::resetChecks()
 // Write data and launch game methods.
 QString MainWindow::writePlayerData(QString dataToWrite)
 {
-    QFile playerData(QCoreApplication::applicationDirPath() + playerDataFile);
+    QFile playerData(QCoreApplication::applicationDirPath() + playerDataFilePath);
     if (!playerData.open(QIODevice::WriteOnly | QIODevice::Truncate))
     {
         return QString("The player data file could not be written. Please check your RTR installation and make sure the player data file"\
