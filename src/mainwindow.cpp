@@ -376,8 +376,8 @@ QString MainWindow::launcherReqFilesCheck()
         returnstring += "Could not find the data file for the launcher (launcher.dat) in the launcher folder. Check that you have installed RTR correctly"\
                     " and not moved any files in the launcher folder.\n\n";
 
-    // NOTE: Comment out next line to avoid critical error dialog blocking the launcher when testing.
     // If no error was recorded, then set the string to 'y' to signal that all the required files and dirs were found.
+    // NOTE: Comment out next line to avoid critical error dialog blocking the launcher when testing.
     if (returnstring.isEmpty())
         returnstring = "y";
 
@@ -555,11 +555,13 @@ int MainWindow::readLauncherData(OptionData *l)
         // Since any errors detected so far are not application-breaking, return an all ok '0'.
         return 0;
     }
+
     // If the file was not found, send a critical error.
     else
     {
-        QMessageBox::critical(this,"Launcher data error!", "Could not find the data file for the launcher (launcher.dat) in the launcher folder. Check that you have installed RTR correctly"\
-                                                    " and not moved any files in the launcher folder.\n\n", QMessageBox::Close, QMessageBox::Close);
+        QMessageBox::critical(this,"Launcher data error!", "Could not find the data file for the launcher (launcher.dat) in the launcher folder."\
+                                                           " Check that you have installed RTR correctly and not moved any files in the launcher folder.\n\n",\
+                              QMessageBox::Close, QMessageBox::Close);
         // Return an error code 404, very cleverly referencing the HTTP error for file not found.
         return 404;
     }
@@ -580,7 +582,7 @@ void MainWindow::readPlayerData()
         // Try to open it, and if it doesn't, send a critical error.
         if (!playerdatafile.open(QIODevice::ReadOnly))
             QMessageBox::critical(this,"File not readable", "The player data file could not be read. Please check your RTR installation and make sure the player data file"\
-                                                         " is accessible.\n\nError: " + playerdatafile.errorString());
+                                                         " is accessible.\n\nError: " + playerdatafile.errorString(), QMessageBox::Close, QMessageBox::Close);
 
         // Otherwise, create a QTextStream interface 'in' with a reference to the launcher data file.
         QTextStream in(&playerdatafile);
@@ -928,7 +930,7 @@ int MainWindow::readPreferences()
         // Create a QTextStream interface 'out' with a reference to the preferences data file QFile object.
         QTextStream out(&preffile);
 
-        // Set the encoding to UTF-8 for less limited script support.
+        // Set the encoding to UTF-8 for wider script support.
         out.setCodec("UTF-8");
 
         // Put the modified contents to store into the QTextStream (and therefore, the preferences file).
@@ -1010,84 +1012,145 @@ bool MainWindow::checkDefaults()
 // Method to check whether the map.rwm file is up to date to the rest of the contents of the other map files.
 int MainWindow::checkMapRwm()
 {
-    QDir basefolder(QCoreApplication::applicationDirPath() + "/../data/world/maps/base");
-    QFileInfo map(basefolder.absolutePath() + "/map.rwm");
-    QDateTime mapmod = map.lastModified();
-    basefolder.setFilter(QDir::Files);
-    if (basefolder.exists())
+    // Create a QDir object pointing to the campaign map's base directory.
+    QDir basedir(QCoreApplication::applicationDirPath() + "/../data/world/maps/base");
+
+    // Check if the base directory exists.
+    if (basedir.exists())
     {
-        if (map.exists() && map.isFile())
+
+        // If it does, generate the absolute file path pointing to the absolute path of the map.RWM file, the
+        // RTW-generated map file that must be deleted to generate a new one in case of any recent changes.
+        QString maprwmpath = basedir.absolutePath() + "/map.rwm";
+
+        // Check if the map.RWM file exists.
+        if (fileExists(maprwmpath))
         {
-            QFileInfoList filelist = basefolder.entryInfoList(QDir::Files);
+            // If it does, create a QFileInfo object pointing to the absolute path of the file.
+            QFileInfo maprwm(maprwmpath);
+
+            // Store the timestamp of the last modification of the map.RWM file to compare with the raw map files.
+            QDateTime mapmod = maprwm.lastModified();
+
+            //basedir.setFilter(QDir::Files);
+            // Store the list of files in the base folder into a QFileInfoList object to check if the map is up-to-date.
+            QFileInfoList filelist = basedir.entryInfoList(QDir::Files);
+
+            // Create a bool to signal whether the map.RWM needs to be deleted or not, initialise it as false.
+            bool needsdel = false;
+
+            // For each file (as a QFileInfo object) in the list of files:
             foreach (QFileInfo fileinfo, filelist)
             {
-                if (map.exists())
+                // If so, store the extension of the current file we are processing.
+                QString ext = fileinfo.suffix();
+
+                // Check if the extension is either .TGA or .TXT, since those are the only relevant ones.
+                if (ext=="tga" || ext=="txt")
                 {
-                    QString ext = fileinfo.suffix();
-                    if (ext=="tga" || ext=="txt")
+                    // If it is, then store the timestamp of the last modification.
+                    QDateTime filemod = fileinfo.lastModified();
+
+                    // Check if the current file was modified after the map file by comparing the timestamps.
+                    if (mapmod < filemod)
                     {
-                        QDateTime filemod = fileinfo.lastModified();
-                        if (mapmod < filemod)
-                        {
-                            QFile mapfile(map.absoluteFilePath());
-                            if (mapfile.remove())
-                            {
-                                QMessageBox::information(this,"Success", "The map.rwm file was out of date and was successfully deleted.\nAn up-to-date file will be generated by the game at launch.", QMessageBox::Close, QMessageBox::Close);
-                                return 0;
-                            }
-                            else
-                            {
-                                QMessageBox::critical(this,"Error!", "The map.rwm file was out of date but could not be deleted.\nPlease try again. If this error persists, check your RTR installation.", QMessageBox::Close, QMessageBox::Close);
-                                return 403;
-                            }
-                        }
+                        // If it was, signal that we need to delete the map.RWM file.
+                        needsdel = true;
                     }
                 }
             }
-            QMessageBox::information(this,"Success", "The map.rwm file was up-to-date.\nNo further action was needed.", QMessageBox::Close, QMessageBox::Close);
-            return 0;
+
+            // Check if we need to delete the map.RWM file.
+            if (needsdel)
+            {
+                // If we do, create a QFile object pointing to the absolute path of the map.RWM file.
+                QFile maprwmfile(maprwmpath);
+
+                // Try to remove it, and, if not successful, send a critical error
+                if (!maprwmfile.remove())
+                {
+                    QMessageBox::critical(this,"Error!", "The map.rwm file was out of date but could not be deleted.\nPlease try again. If this error persists, check your RTR"\
+                                                         " installation.", QMessageBox::Close, QMessageBox::Close);
+                    // Return an error code 404, very cleverly referencing the HTTP error for forbidden.
+                    return 403;
+                }
+
+                // Otherwise, inform the user of our success and the generation process, and return an all ok '0'.
+                QMessageBox::information(this,"Success", "The map.rwm file was out of date and was successfully deleted.\nAn up-to-date file will be generated by the game"\
+                                                         " at launch.", QMessageBox::Close, QMessageBox::Close);
+                return 0;
+            }
+            // If we did not need to delete the map.RWM file, inform the user, and return an all ok '0'.
+            else
+            {
+                QMessageBox::information(this,"Success", "The map.rwm file was up-to-date.\nNo further action was needed.", QMessageBox::Close, QMessageBox::Close);
+                return 0;
+            }
         }
+
+        // If the file was not found, then inform the player, and since the file will be generated by the game, and it
+        // will handle any other issues with the raw map files, if any, our job is done, so we return an all ok '0'.
         else
         {
-            QMessageBox::information(this,"Success", "The map.rwm file was not present.\nAn up-to-date file will be generated by the game at launch.", QMessageBox::Close, QMessageBox::Close);
+            QMessageBox::information(this,"Success", "The map.rwm file was not present.\nAn up-to-date file will be generated by the game at launch.", QMessageBox::Close,\
+                                     QMessageBox::Close);
             return 0;
         }
     }
+
+    // If the campaign map's base directory was not found, then send a critical error.
     else
     {
         QMessageBox::critical(this,"Critical error!", "The base campaign folder was not found. Make sure you have installed RTR correctly,"\
-                                              "and that the launcher is in the location \n[RTW install folder]/[RTR mod folder]/[launcher folder]/RTRLauncher.exe.", QMessageBox::Close, QMessageBox::Close);
-        return 403;
+                                              "and that the launcher is in the location \n[RTW install folder]/[RTR mod folder]/[launcher folder]"\
+                              "/RTRLauncher.exe.", QMessageBox::Close, QMessageBox::Close);
+        // Return an error code 404, very cleverly referencing the HTTP error for file not found.
+        return 404;
     }
 }
 
 // Reset options methods:
 void MainWindow::resetChecks()
 {
+    // To reset the checkboxes to default, we go through each QCheckBox in the chechboxes list:
     foreach (QCheckBox *c, checkboxeslist)
     {
+        // Set the check status of each to false,
         c->setChecked(false);
     }
+    // but set the showerrBox to true, since it's very useful for debugging, and there is no reason to leave it off.
     ui->showerrBox->setChecked(true);
 }
 
 // Write data and launch game methods.
 QString MainWindow::writePlayerData(QString dataToWrite)
 {
+    // Create a QFile object pointing to the the absolute file path for the player data file generated using the
+    // relative path defined in optiondata.h (since we'll overwrite it, there's no reason to check if it exists).
     QFile playerData(QCoreApplication::applicationDirPath() + playerDataFilePath);
+
+    // If the file cannot be opened (or created) in write-only mode, and its contents discarded (with Truncate):
     if (!playerData.open(QIODevice::WriteOnly | QIODevice::Truncate))
     {
+        // Return a string informing the user of the error.
         return QString("The player data file could not be written. Please check your RTR installation and make sure the player data file"\
                                                      " is accessible.\nError: " + playerData.errorString());
     }
-    else
-    {
-        QTextStream out(&playerData);
-        out.setCodec("UTF-8");
-        out << dataToWrite;
-        playerData.close();
-        return "";
-    }
+
+    // Otherwise, create a QTextStream interface 'out' with a reference to the player data file QFile object.
+    QTextStream out(&playerData);
+
+    // Set the encoding to UTF-8 for wider script support.
+    out.setCodec("UTF-8");
+
+    // Put the data received as a method parameter into the QTextStream (and therefore, the player data file).
+    out << dataToWrite;
+
+    // Close the QFile since we finished using it.
+    playerData.close();
+
+    // Return an empty string, signalling there were no errors.
+    return "";
 }
 
 QString MainWindow::filefolderSwitch(QComboBox *combobox, QList<OptionObject> options)
@@ -1225,7 +1288,7 @@ QStringList MainWindow::setArguments()
         int result = checkMapRwm();
         switch (result)
         {
-        case 1:
+        case 403:
             QMessageBox::critical(this,"Error!", "The map.rwm file was out of date but could not be deleted.\nPlease try again. If this error persists, check your RTR installation.", QMessageBox::Close, QMessageBox::Close);
             QMessageBox::StandardButton confirm;
             confirm = QMessageBox::warning(this,"Continue launching?", "The map file could not be deleted and will be out of date.\n"\
@@ -1233,7 +1296,7 @@ QStringList MainWindow::setArguments()
             if (confirm == QMessageBox::No)
                 argList[0] = "n";
             break;
-        case 4:
+        case 404:
             QMessageBox::critical(this,"Critical error!", "The base campaign folder was not found. Make sure you have installed RTR correctly,"\
                                                   "and that the launcher is in the location \n[RTW install folder]/[RTR mod folder]/[launcher folder]/RTRLauncher.exe.\n\n", QMessageBox::Close, QMessageBox::Close);
                 argList[0] = "n";
