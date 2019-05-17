@@ -15,11 +15,13 @@
 // Include the QComboBox class for one of the method declarations.
 #include <QComboBox>
 
+//
 // Standard QT UI window class declaration inside the Ui namespace.
 namespace Ui {
 class MainWindow;
 }
 
+//
 // Create a class for the main window of the launcher, with a public inheritance from the QMainWindow class.
 class MainWindow : public QMainWindow
 {
@@ -121,7 +123,7 @@ private:
     QString filefolderSwitch(QComboBox *combobox, QList<OptionObject> launcheroptionslist);
 
     // Method to copy folders recursively and paste them recursively to their destination.
-    bool copyRecursively(QString sourceFolder, QString destFolder);
+    bool copyRecursively(QString sourcedirpath, QString destdirpath);
 
     // Method to store the command line arguments to use when launching the executable into a QStringList.
     QStringList setArguments();

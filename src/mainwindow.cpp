@@ -179,7 +179,7 @@ void MainWindow::on_launchButton_clicked()
         // Create a message box asking the player to confirm if they want to continue launching the game even though
         // their settings could not be saved, with the default button (when pressing enter) being no.
         confirm = QMessageBox::warning(this,"Continue launching?", errstring + "\n\nYour configuration could not be saved, and will be discarded if you launch the game.\n"\
-                             "Do you wish to continue launching the game?", QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+                                                                               "Do you wish to continue launching the game?", QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
         // If the button pressed was the 'No' button:
         if (confirm == QMessageBox::No)
             // Do not go ahead with launching the game.
@@ -204,7 +204,7 @@ void MainWindow::on_launchButton_clicked()
     {
         // Add a final piece of information to the error text.
         errortext += "\nAlthough the game may run normally, it is likely your desired configuration will\nnot be in effect, and the game might not even start correctly\n\n"\
-                "Do you wish to continue launching the game?";
+                     "Do you wish to continue launching the game?";
         // See above.
         QMessageBox::StandardButton confirm;
         confirm = QMessageBox::critical(this,"Error!", errortext, QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
@@ -223,7 +223,7 @@ void MainWindow::on_launchButton_clicked()
     if (goahead == true && commands[0]!="n")
     {
         // QFileInfo object for the RTW executable to launch, assuming the user has correctly installed the launcher in
-        // [RTW/MODFOLDER/Launcher]. Path has to be absolute, otherwise it does not work.
+        // [RomeTW/MODFOLDER/Launcher]. Path has to be absolute, otherwise it does not work.
         QFileInfo rtwexec(QCoreApplication::applicationDirPath() + "/../../RomeTW-ALX.exe");
         // Check if the game executable can be found, is actually a file, and is executable, just to be sure.
         if (rtwexec.exists() && rtwexec.isFile() && rtwexec.isExecutable())
@@ -244,16 +244,17 @@ void MainWindow::on_launchButton_clicked()
                 // (though it would be better if it returned 0 to the main, but alas).
                 QApplication::quit();
             else
+                // TODO: Implement engine selection.
                 // If the executable could not be launched, alert the user of the problem with a message box.
                 QMessageBox::critical(this,"Critical error!", "The Rome: Total War - Alexander executable could not be launched. Make sure you have installed Rome: Total War correctly,"\
-                                                             "and that the launcher is in the location \n[RTW install folder]/[RTR mod folder]/[launcher folder]/RTRLauncher.exe.",\
+                                                              "and that the launcher is in the location \n[RomeTW install folder]/[mod folder]/[launcher folder]/Launcher.exe.",\
                                       QMessageBox::Close, QMessageBox::Close);
         }
         else
         {
             // If the executable was not found, alert the user of the problem with a message box.
-            QMessageBox::critical(this,"Critical error!", "The Rome: Total War - Alexander executable was not found. Make sure you have installed RTR correctly,"\
-                                                         "and that the launcher is in the location \n[RTW install folder]/[RTR mod folder]/[launcher folder]/RTRLauncher.exe.",\
+            QMessageBox::critical(this,"Critical error!", "The Rome: Total War - Alexander executable was not found. Make sure you have installed the mod correctly,"\
+                                                          "and that the launcher is in the location \n[RomeTW install folder]/[mod folder]/[launcher folder]/Launcher.exe.",\
                                   QMessageBox::Close, QMessageBox::Close);
         }
     }
@@ -332,8 +333,7 @@ void MainWindow::on_defaultsButton_clicked()
 // ==================
 // Private methods:
 
-// Check file/folder existence methods:
-
+    // Check file/folder existence methods:
 // Method to check if a file with the specified absolute path exists and is indeed a file.
 bool MainWindow::fileExists(QString abspath)
 {
@@ -364,17 +364,17 @@ QString MainWindow::launcherReqFilesCheck()
     // If no game executable is not found, add an error message to the string. Note that fileExists() and dirExists()
     // both require the file path parameter to be an absolute path.
     if (!fileExists(QCoreApplication::applicationDirPath() + "/../../RomeTW-ALX.exe"))
-        returnstring += "The Rome: Total War - Alexander executable was not found. Make sure you have installed RTR correctly,"\
-                    "and that the launcher is in the location \n[RTW install folder]/[RTR mod folder]/[launcher folder]/RTRLauncher.exe.\n\n";
+        returnstring += "The Rome: Total War - Alexander executable was not found. Make sure you have installed the mod correctly,"\
+                        "and that the launcher is in the location \n[RomeTW install folder]/[mod folder]/[launcher folder]/Launcher.exe.\n\n";
 
     // If the mod data folder was not found, add an error message to the string.
     if (!dirExists(QCoreApplication::applicationDirPath() + "/../data"))
-        returnstring += "The RTR data folder was not found. Make sure you have installed RTR correctly\n\n";
+        returnstring += "The mod data folder was not found. Make sure you have installed the mod correctly\n\n";
 
     // If the launcher data file was not found, add an error message to the string.
     if (!fileExists(QCoreApplication::applicationDirPath() + launcherDataFilePath))
-        returnstring += "Could not find the data file for the launcher (launcher.dat) in the launcher folder. Check that you have installed RTR correctly"\
-                    " and not moved any files in the launcher folder.\n\n";
+        returnstring += "Could not find the data file for the launcher (launcher.dat) in the launcher folder. Check that you have installed the mod correctly"\
+                        " and not moved any files in the launcher folder.\n\n";
 
     // If no error was recorded, then set the string to 'y' to signal that all the required files and dirs were found.
     // NOTE: Comment out next line to avoid critical error dialog blocking the launcher when testing.
@@ -385,7 +385,7 @@ QString MainWindow::launcherReqFilesCheck()
     return returnstring;
 }
 
-// Read data methods:
+    // Read data methods:
 // Method to read the launcher data file.
 // Require an OptionData class where all the launcher options will be stored
 int MainWindow::readLauncherData(OptionData *l)
@@ -402,8 +402,8 @@ int MainWindow::readLauncherData(OptionData *l)
         // Try to open it, and if it doesn't, send a critical error and return an error code.
         if (!launcherdata.open(QIODevice::ReadOnly | QIODevice::Text))
         {
-            QMessageBox::critical(this,"File not readable", "The data file could not be read. Please check your RTR installation and make sure the data"\
-                                                         " is accessible.\n\nError: " + launcherdata.errorString());
+            QMessageBox::critical(this,"File not readable", "The data file could not be read. Please check your installation and make sure the data"\
+                                                            " is accessible.\n\nError: " + launcherdata.errorString());
             // Very cleverly referencing the HTTP error code for Bad Request.
             return 400;
         }
@@ -532,14 +532,14 @@ int MainWindow::readLauncherData(OptionData *l)
             foreach (OptionObject oo, l->getListOfDirs())
                 if (!dirExists(oo.abspath))
                     // If a directory cannot be found, add a warning to the QString.
-                    warningtext += QString("Directory error: directory chosen for option '%1' cannot be found. Verify your RTR installation or your launcher data file.\n").arg(oo.displayname);
+                    warningtext += QString("Directory error: directory chosen for option '%1' cannot be found. Verify your installation or your launcher data file.\n").arg(oo.displayname);
 
         // If we have any options using files, go through them and check if the files chosen exist:
         if (l->getListOfFiles().size()>0)
             foreach (OptionObject fo, l->getListOfFiles())
                 if (!fileExists(fo.abspath))
                     // If a file cannot be found, add a warning to the QString.
-                    warningtext += QString("File error: file chosen for option '%1' cannot be found. Verify your RTR installation or your launcher data file.\n").arg(fo.displayname);
+                    warningtext += QString("File error: file chosen for option '%1' cannot be found. Verify your installation or your launcher data file.\n").arg(fo.displayname);
 
         // Check if the warning string is not empty:
         if (!warningtext.isEmpty())
@@ -560,7 +560,7 @@ int MainWindow::readLauncherData(OptionData *l)
     else
     {
         QMessageBox::critical(this,"Launcher data error!", "Could not find the data file for the launcher (launcher.dat) in the launcher folder."\
-                                                           " Check that you have installed RTR correctly and not moved any files in the launcher folder.\n\n",\
+                                                           " Check that you have installed the mod correctly and not moved any files in the launcher folder.\n\n",\
                               QMessageBox::Close, QMessageBox::Close);
         // Return an error code 404, very cleverly referencing the HTTP error for file not found.
         return 404;
@@ -581,8 +581,8 @@ void MainWindow::readPlayerData()
 
         // Try to open it, and if it doesn't, send a critical error.
         if (!playerdatafile.open(QIODevice::ReadOnly))
-            QMessageBox::critical(this,"File not readable", "The player data file could not be read. Please check your RTR installation and make sure the player data file"\
-                                                         " is accessible.\n\nError: " + playerdatafile.errorString(), QMessageBox::Close, QMessageBox::Close);
+            QMessageBox::critical(this,"File not readable", "The player data file could not be read. Please check your installation and make sure the player data file"\
+                                                            " is accessible.\n\nError: " + playerdatafile.errorString(), QMessageBox::Close, QMessageBox::Close);
 
         // Otherwise, create a QTextStream interface 'in' with a reference to the launcher data file.
         QTextStream in(&playerdatafile);
@@ -711,7 +711,7 @@ QString MainWindow::playerDataTextGen()
 {
     // Self-explanatory. QString to store the data as we generate it.
     QString dataText = "// ------------------------------------------------------------------------------------------------------------\n"\
-            "// Start options checkboxes\n";
+                       "// Start options checkboxes\n";
     // To pass the state of the checkbox as checked (1) or unchecked (0), we form a QString with a %1 placerholder for
     // the parameter we pass with arg(). The syntax (Bool ? "1" : "0") checks a boolean and assigns a value for the
     // true or false check inline. If the checkbox is checked (hence == true), write '1'; if false, write '0'.
@@ -727,25 +727,25 @@ QString MainWindow::playerDataTextGen()
     dataText += QString("swBox:%1").arg(ui->swBox->isChecked() ? "1" : "0") + "\n";
     dataText += QString("maprwmBox:%1").arg(ui->maprwmBox->isChecked() ? "1" : "0") + "\n";
     dataText += "\n// ------------------------------------------------------------------------------------------------------------\n"\
-            "// EDU select\n";
+                "// EDU select\n";
     dataText += QString("eduComboBox:%1").arg(ui->eduComboBox->currentData().toString()) + "\n";
     dataText += "\n// ------------------------------------------------------------------------------------------------------------\n"\
-            "// Trees select\n";
+                "// Trees select\n";
     dataText += QString("treesComboBox:%1").arg(ui->treesComboBox->currentData().toString()) + "\n";
     dataText += "\n// ------------------------------------------------------------------------------------------------------------\n"\
-            "// Campaign select\n";
+                "// Campaign select\n";
     dataText += QString("campComboBox:%1").arg(ui->campComboBox->currentData().toString()) + "\n";
     dataText += "\n// ------------------------------------------------------------------------------------------------------------\n\n"\
-            "\n// ------------------------------------------------------------------------------------------------------------\n"\
-            "// ------------------------------------------------------------------------------------------------------------\n"\
-            "// This is an example of a comment\n"\
-            "Lines without a colon will get ignored without displaying a warning too.\n"\
-            "//So will empty lines.\n\n"\
-            "// This file lists all the player-customised options chosen for launching the game, including start options and chosen campaign and game type.\n"\
-            "// Syntax: [option code]:[setting code]\n"\
-            "// File encoding must be in UTF-8!\n"\
-            "// ------------------------------------------------------------------------------------------------------------\n"\
-            "// ------------------------------------------------------------------------------------------------------------\n";
+                "\n// ------------------------------------------------------------------------------------------------------------\n"\
+                "// ------------------------------------------------------------------------------------------------------------\n"\
+                "// This is an example of a comment\n"\
+                "Lines without a colon will get ignored without displaying a warning too.\n"\
+                "//So will empty lines.\n\n"\
+                "// This file lists all the player-customised options chosen for launching the game, including start options and chosen campaign and game type.\n"\
+                "// Syntax: [option code]:[setting code]\n"\
+                "// File encoding must be in UTF-8!\n"\
+                "// ------------------------------------------------------------------------------------------------------------\n"\
+                "// ------------------------------------------------------------------------------------------------------------\n";
     return dataText;
 }
 
@@ -778,8 +778,8 @@ int MainWindow::readPreferences()
         if(!preferencesDir.mkdir(prefFolder))
         {
             // If so, alert the player.
-            QMessageBox::critical(this, "Folder creation error", "The preferences folder is missing and could not be created. Please try again or create the folder '[RomeTW folder]/[RTR folder]/preferences/' manually.",\
-                                 QMessageBox::Close, QMessageBox::Close);
+            QMessageBox::critical(this, "Folder creation error", "The preferences folder is missing and could not be created. Please try again or create the folder"\
+                                                                 "'[RomeTW folder]/[mod folder]/preferences/' manually.", QMessageBox::Close, QMessageBox::Close);
 
             // Since we cannot do anything with the preferences dialog if we cannot even create the preferences
             // folder, return an error code 403, very cleverly referencing the HTTP error code for Forbidden.
@@ -794,7 +794,7 @@ int MainWindow::readPreferences()
         if (prefsdialog->writePreferences(defaultPreferencesData) != 0)
         {
             QMessageBox::critical(this, "Folder creation error", "The preferences file could not be created. Please try again.",\
-                                 QMessageBox::Close, QMessageBox::Close);
+                                  QMessageBox::Close, QMessageBox::Close);
             // Since we cannot do anything with the preferences dialog if we cannot even create the preferences file,
             // return an error code 403, very cleverly referencing the HTTP error code for Forbidden.
             return 403;
@@ -808,8 +808,8 @@ int MainWindow::readPreferences()
     if (!preffile.open(QIODevice::ReadWrite))
     {
         // If so, alert the player.
-        QMessageBox::critical(this,"File not readable", "The preferences file could not be read. Please check your RTR installation and make sure the preferences file"\
-                                                     " is accessible.\n\nError: " + preffile.errorString());
+        QMessageBox::critical(this,"File not readable", "The preferences file could not be read. Please check your installation and make sure the preferences file"\
+                                                        " is accessible.\n\nError: " + preffile.errorString());
         // Since we cannot do anything with the preferences dialog if we cannot even open the preferences file, return
         // an error code 403, very cleverly referencing the HTTP error code for Forbidden.
         return 403;
@@ -983,7 +983,7 @@ void MainWindow::setOptions(OptionData *l, QComboBox *combobox, QString optionty
     }
 }
 
-// Checking data methods:
+    // Checking data methods:
 // Method to check whether the user's configuration is different from the defaults.
 bool MainWindow::checkDefaults()
 {
@@ -1032,7 +1032,6 @@ int MainWindow::checkMapRwm()
             // Store the timestamp of the last modification of the map.RWM file to compare with the raw map files.
             QDateTime mapmod = maprwm.lastModified();
 
-            //basedir.setFilter(QDir::Files);
             // Store the list of files in the base folder into a QFileInfoList object to check if the map is up-to-date.
             QFileInfoList filelist = basedir.entryInfoList(QDir::Files);
 
@@ -1069,7 +1068,7 @@ int MainWindow::checkMapRwm()
                 // Try to remove it, and, if not successful, send a critical error
                 if (!maprwmfile.remove())
                 {
-                    QMessageBox::critical(this,"Error!", "The map.rwm file was out of date but could not be deleted.\nPlease try again. If this error persists, check your RTR"\
+                    QMessageBox::critical(this,"Error!", "The map.rwm file was out of date but could not be deleted.\nPlease try again. If this error persists, check your"\
                                                          " installation.", QMessageBox::Close, QMessageBox::Close);
                     // Return an error code 404, very cleverly referencing the HTTP error for forbidden.
                     return 403;
@@ -1101,15 +1100,16 @@ int MainWindow::checkMapRwm()
     // If the campaign map's base directory was not found, then send a critical error.
     else
     {
-        QMessageBox::critical(this,"Critical error!", "The base campaign folder was not found. Make sure you have installed RTR correctly,"\
-                                              "and that the launcher is in the location \n[RTW install folder]/[RTR mod folder]/[launcher folder]"\
-                              "/RTRLauncher.exe.", QMessageBox::Close, QMessageBox::Close);
+        QMessageBox::critical(this,"Critical error!", "The base campaign folder was not found. Make sure you have installed the mod correctly,"\
+                                                      "and that the launcher is in the location \n[RomeTW install folder]/[mod folder]/[launcher folder]"\
+                                                      "/Launcher.exe.", QMessageBox::Close, QMessageBox::Close);
         // Return an error code 404, very cleverly referencing the HTTP error for file not found.
         return 404;
     }
 }
 
-// Reset options methods:
+    // Reset options methods:
+// Resets the checkboxes to their default states (reset to defaults).
 void MainWindow::resetChecks()
 {
     // To reset the checkboxes to default, we go through each QCheckBox in the chechboxes list:
@@ -1122,7 +1122,9 @@ void MainWindow::resetChecks()
     ui->showerrBox->setChecked(true);
 }
 
-// Write data and launch game methods.
+    // Write data and launch game methods:
+// Method to write to the player data file.
+// Takes as parameter a QString that contains the entire contents of the file to write.
 QString MainWindow::writePlayerData(QString dataToWrite)
 {
     // Create a QFile object pointing to the the absolute file path for the player data file generated using the
@@ -1133,8 +1135,8 @@ QString MainWindow::writePlayerData(QString dataToWrite)
     if (!playerData.open(QIODevice::WriteOnly | QIODevice::Truncate))
     {
         // Return a string informing the user of the error.
-        return QString("The player data file could not be written. Please check your RTR installation and make sure the player data file"\
-                                                     " is accessible.\nError: " + playerData.errorString());
+        return QString("The player data file could not be written. Please check your installation and make sure the player data file"\
+                       " is accessible.\nError: " + playerData.errorString());
     }
 
     // Otherwise, create a QTextStream interface 'out' with a reference to the player data file QFile object.
@@ -1153,156 +1155,248 @@ QString MainWindow::writePlayerData(QString dataToWrite)
     return "";
 }
 
+// Method to perform the switch between different campaigns, EDUs, and trees options.
+// Requires a QComboBox object point that points to the specific option switcher combobox to process, as well as a
+// QList of OptionObject structs containing all the switching options and their information.
 QString MainWindow::filefolderSwitch(QComboBox *combobox, QList<OptionObject> options)
 {
+    // Get the currently selected option of the combobox, specifically, the code, not the text (currentData).
     QString currentoption = combobox->currentData().toString();
+
+    // If the currently selected option code is 'default', we do not need to switch between options as there is only
+    // one, so return an errorless empty string.
     if (currentoption == "default")
         return "";
-    else
+
+    // Otherwise, declare a variable for the index of the option in the QList to -1 (an out-of-list-bounds value).
+    int optionindex = -1;
+
+    // Initialise a counter for the following loop.
+    int i = 0;
+    // For each option in the QList of options.
+    foreach (OptionObject option, options)
     {
-        int indexfolder = -1;
-        int index = 0;
-        foreach (OptionObject option, options)
+        // If the option's code name is the same as the code of the currently selected option in the combobox:
+        if (option.optioncode == currentoption)
         {
-            if (option.optioncode==currentoption && indexfolder==-1)
-            {
-                indexfolder = index;
-            }
-            index++;
+            // Set the optionindex value to the counter.
+            optionindex = i;
         }
-        if (indexfolder!=-1)
+        // Add one to the counter.
+        i++;
+    }
+
+    // If the optionindex is not the default out-of-bounds -1 (hence the option selected was found in the data file):
+    if (optionindex != -1)
+    {
+        // Get the OptionObject struct of the desired option by grabbing the list object at the index we set earlier.
+        OptionObject o = options.at(optionindex);
+
+        // If the path type of the option is a directory, and not a file:
+        if (o.pathtype=="dir")
         {
-            OptionObject o = options.at(indexfolder);
-            //qDebug() << o.pathtype;
-            if (o.pathtype=="dir")
+            // Check if it exists by using its absolute path, and if so:
+            if (dirExists(o.abspath))
             {
+                // Make a QDir object pointing to the option directory (assuming the launcher is in the right folder).
                 QDir data(QCoreApplication::applicationDirPath() + "/../data");
-                //qDebug() << data.absolutePath();
+
+                // If the copyRecursively option was successful, return an errorless empty string.
                 if (copyRecursively(o.abspath,data.absolutePath()))
                     return "";
+                // Otherwise, return an error message string saying the folder for the current option could not be copied.
                 else
-                    return QString("The folder for the game type '%1' could not be copied.\n").arg(combobox->currentText());
-                    //messagetext += QString("The folder of the game type '%1' could not be copied.\n").arg(o.displayname);
-            }
-            else
-            {
-                if (fileExists(o.abspath))
-                {
-                    QFileInfo filecopyinfo(o.abspath);
-                    QFile filecopy(o.abspath);
-                    QFileInfo originalfile(QCoreApplication::applicationDirPath() + "/../data/" + filecopyinfo.fileName());
-                    QString originalfilepath(originalfile.absoluteFilePath());
-                    //qDebug() << edufileinfo.filePath();
-                    QFileInfo file(originalfilepath);
-                    if (file.exists())
-                    {
-                        QFile filetorm(originalfilepath);
-                        filetorm.remove();
-                    }
-                    if (filecopy.copy(originalfilepath))
-                        return "";
-                    else
-                        //qDebug() << filecopy.errorString();
-                        return QString("The file for the game type '%1' could not be copied.\n").arg(combobox->currentText());;
-                        //messagetext += QString("The file for the game type '%1' could not be copied.\n").arg(o.displayname);
-                }
+                    return QString("The folder for the game type '%1' could not be copied.\n").arg(o.displayname);
             }
         }
-        return QString("The files for the game type '%1' could not be found.\n").arg(combobox->currentText());
-        //messagetext += QString("The files for the game type '%1' could not be found.\n").arg(ui->eduComboBox->currentText().toString());
+
+        // If we have reached this point, the path type was a file, so check if it exists by using its absolute path.
+        if (fileExists(o.abspath))
+        {
+            // If it does, make a QFileInfo and QFile objects pointing to the option's absolute path.
+            QFileInfo srcfileinfo(o.abspath);
+            QFile srcfile(o.abspath);
+
+            // Make a QFileInfo pointing to the file we will replace (asusming the launcher is in the right folder).
+            QFileInfo destfileinfo(QCoreApplication::applicationDirPath() + "/../data/" + srcfileinfo.fileName());
+            // Make a string of the absolute path of the file we will replace.
+            QString destfilepath(destfileinfo.absoluteFilePath());
+
+            //qDebug() << edufileinfo.filePath();
+            //QFileInfo file(filetoreplacepath);
+
+            // If the file we want to replace exists, we need to delete it first, since copy() does not overwrite:
+            if (fileExists(destfilepath))
+            {
+                // Make a QFile pointing to the file to replace and delete it (through remove()).
+                QFile filetorm(destfilepath);
+                filetorm.remove();
+            }
+
+            // If copying the option file to its destination is not successful, return an error message.
+            if (!srcfile.copy(destfilepath))
+                return QString("The file for the game type '%1' could not be copied.\n").arg(o.displayname);
+
+            // We reach this point if there were no errors in the file replacing, so return an errorless empty string.
+            return "";
+        }
     }
 
-
-    //return messagetext;
+    // Otherwise, if the option was not found in the list (and therefore the files needed to replace it), send an error
+    // to the user, with the name of the currently selected option.
+    return QString("The files for the game type '%1' could not be found.\n").arg(combobox->currentText());
 }
 
-// function taken from https://forum.qt.io/topic/59245/is-there-any-api-to-recursively-copy-a-directory-and-all-it-s-sub-dirs-and-files/3
-bool MainWindow::copyRecursively(QString sourceFolder, QString destFolder)
+// Method to copy folders recursively and paste them recursively to their destination.
+// Require QStrings of the paths of the source and destination directories.
+// Function taken and adapted from https://forum.qt.io/topic/59245/is-there-any-api-to-recursively-copy-a-directory-and-all-it-s-sub-dirs-and-files/3
+bool MainWindow::copyRecursively(QString sourcedirpath, QString destdirpath)
 {
+    // Declare a variable to indicate the success of the operation, and set it to false for now.
     bool success = false;
-    QDir sourceDir(sourceFolder);
 
-    if(!sourceDir.exists())
+    // If the source directory does not exist, return false.
+    if(!dirExists(sourcedirpath))
         return false;
 
-    QDir destDir(destFolder);
-    if(!destDir.exists())
-        destDir.mkdir(destFolder);
+    // If the destination directory does not exist:
+    if(!dirExists(destdirpath))
+    {
+        // Create a QDir object pointing to the destination directory path, and create the directory at the path.
+        QDir destdir(destdirpath);
+        destdir.mkdir(destdirpath);
+    }
 
-    QStringList files = sourceDir.entryList(QDir::Files);
+    // Declare a QDir pointing to the path of the source directory.
+    QDir sourcedir(sourcedirpath);
+    // Get a list of files in the source directory and store their names in a list of strings.
+    QStringList files = sourcedir.entryList(QDir::Files);
+
+    // Loop through each file:
     for(int i = 0; i< files.count(); i++) {
-        QString srcName = sourceFolder + QDir::separator() + files[i];
-        QString destName = destFolder + QDir::separator() + files[i];
-        QFileInfo file(destName);
-        if (file.exists())
+        // Generate the paths for the source and destination files.
+        QString srcpath = sourcedirpath + QDir::separator() + files[i];
+        QString destpath = destdirpath + QDir::separator() + files[i];
+
+        // If the file we want to replace exists, we need to delete it first, since copy() does not overwrite:
+        if (fileExists(destpath))
         {
-            QFile filetorm(destName);
+            // Make a QFile pointing to the file to replace and delete it (through remove()).
+            QFile filetorm(destpath);
             filetorm.remove();
         }
-        success = QFile::copy(srcName, destName);
+
+        // Assign the success of copying the source file to its destination to the boolean success variable.
+        success = QFile::copy(srcpath, destpath);
+
+        // If the copying was not successful, return false.
         if(!success)
             return false;
     }
 
+    // Clear the list of files of its contents.
     files.clear();
-    files = sourceDir.entryList(QDir::AllDirs | QDir::NoDotAndDotDot);
+    // Fill it once more with all the directories (AllDirs) in the current folder but without the special '.' and '..'
+    // folder entries (NoDotAndDotDot).
+    files = sourcedir.entryList(QDir::AllDirs | QDir::NoDotAndDotDot);
+
+    // Loop through each file:
     for(int i = 0; i< files.count(); i++)
     {
-        QString srcName = sourceFolder + QDir::separator() + files[i];
-        QString destName = destFolder + QDir::separator() + files[i];
-        success = copyRecursively(srcName, destName);
+        // Generate the paths for the source and destination directories.
+        QString srcname = sourcedirpath + QDir::separator() + files[i];
+        QString destname = destdirpath + QDir::separator() + files[i];
+
+        // Call the function recursively for the current folder and set the boolean success variable to match the
+        // result of the success status of the recursive function call.
+        success = copyRecursively(srcname, destname);
+
+        // If the recursive copying was not successful, return false.
         if(!success)
             return false;
     }
 
+    // We can only reach this point if all folders and files were copied successfully (otherwise, there would have been
+    // a return boolean of false, which would have been propagated upwards to the initial call by all the if(!success)
+    // checks, regardless of the position in the recursion chain), so return true.
     return true;
 }
 
+// Method to store the command line arguments to use when launching the executable into a QStringList.
 QStringList MainWindow::setArguments()
 {
-    QStringList argList;
-    argList.append("-mod:RTR");
-    if (ui->showerrBox->isChecked())
-        argList.append("-show_err");
-    if (ui->neBox->isChecked())
-        argList.append("-ne");
-    if (ui->nmBox->isChecked())
-        argList.append("-nm");
-    if (ui->multirunBox->isChecked())
-        argList.append("-multirun");
-    if (ui->editorBox->isChecked())
-        argList.append("-enable_editor");
-    if (ui->moviecamBox->isChecked())
-        argList.append("-movie_cam");
-    if (ui->naBox->isChecked())
-        argList.append("-na");
-    if (ui->aiBox->isChecked())
-        argList.append("-ai");
-    if (ui->spritesBox->isChecked())
-        argList.append("-sprite_script");
-    if (ui->swBox->isChecked())
-        argList.append("-sw");
+    // Make a list of QStrings where we will store the command line arguments for the game.
+    QStringList arglist;
 
+    // TODO: Refactor to use other mods.
+    // Firstly, add the command line for using the current mod.
+    arglist.append("-mod:RTR");
+
+    // Then, manually add each of the checkboxes' respective options if they are currently checked.
+    if (ui->showerrBox->isChecked())
+        arglist.append("-show_err");
+
+    if (ui->neBox->isChecked())
+        arglist.append("-ne");
+
+    if (ui->nmBox->isChecked())
+        arglist.append("-nm");
+
+    if (ui->multirunBox->isChecked())
+        arglist.append("-multirun");
+
+    if (ui->editorBox->isChecked())
+        arglist.append("-enable_editor");
+
+    if (ui->moviecamBox->isChecked())
+        arglist.append("-movie_cam");
+
+    if (ui->naBox->isChecked())
+        arglist.append("-na");
+
+    if (ui->aiBox->isChecked())
+        arglist.append("-ai");
+
+    if (ui->spritesBox->isChecked())
+        arglist.append("-sprite_script");
+
+    if (ui->swBox->isChecked())
+        arglist.append("-sw");
+
+    // If the checkbox to always check and update the map.RWM file is checked:
     if (ui->maprwmBox->isChecked())
     {
+        // Make the check and store the returned integer in 'result'.
         int result = checkMapRwm();
+
+        // Check the value of result and:
         switch (result)
         {
+        // If the case is 403 (map.RWM deletion not successful):
         case 403:
-            QMessageBox::critical(this,"Error!", "The map.rwm file was out of date but could not be deleted.\nPlease try again. If this error persists, check your RTR installation.", QMessageBox::Close, QMessageBox::Close);
+            // Make a QMessageBox StandardButton object that will store the button the user pressed.
             QMessageBox::StandardButton confirm;
+
+            // TODO: De-deprecate functions.
+            // Create a message box asking the player to confirm if they want to continue launching the game even though
+            // the map.RWM file could not be deleted, with the default button (when pressing enter) being no.
             confirm = QMessageBox::warning(this,"Continue launching?", "The map file could not be deleted and will be out of date.\n"\
-                                 "Would you like to continue launching the game?",QMessageBox::Yes|QMessageBox::No);
+                                                                       "Would you like to continue launching the game?", QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+
+            // If the button pressed was the 'No' button:
             if (confirm == QMessageBox::No)
-                argList[0] = "n";
+                // Set the first item of the arguments list to 'n' to indicate the launch should not go on.
+                arglist[0] = "n";
             break;
+
+        // If the case is 404 (campaign map base folder not found):
         case 404:
-            QMessageBox::critical(this,"Critical error!", "The base campaign folder was not found. Make sure you have installed RTR correctly,"\
-                                                  "and that the launcher is in the location \n[RTW install folder]/[RTR mod folder]/[launcher folder]/RTRLauncher.exe.\n\n", QMessageBox::Close, QMessageBox::Close);
-                argList[0] = "n";
+            // Set the first item of the arguments list to 'n' to indicate the launch should not go on.
+            arglist[0] = "n";
             break;
         }
     }
 
-    return argList;
+    // Return the list of command-line arguments.
+    return arglist;
 }
