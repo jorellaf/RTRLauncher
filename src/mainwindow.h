@@ -64,13 +64,13 @@ private:
     // OptionData class for handling the list of options for the campaigns, EDUs, and trees selectors.
     OptionData launcheroptionslist;
 
-    // Declare a QList of PlayerOption structs for the options of the player data file (TODO: refactor).
+    // QList of PlayerOption structs for the options of the player data file (TODO: refactor).
     QList<PlayerOption> playeroptionslist;
 
-    // Declare a QList of QCheckBox pointers for handling all the checkboxes of the mainwindow.
+    // QList of QCheckBox pointers for handling all the checkboxes of the mainwindow.
     QList<QCheckBox *> checkboxeslist;
 
-    // Declare the PreferencesDialog UI window object for handling the preferences dialog.
+    // The PreferencesDialog UI window object for handling the preferences dialog.
     PreferencesDialog *prefsdialog;
 
 
@@ -111,7 +111,7 @@ private:
     int checkMapRwm();
 
         // Reset options methods:
-    // Resets the checkboxes to their default states (reset to defaults).
+    // Method to reset the checkboxes to their default states (reset to defaults).
     void resetChecks();
 
 

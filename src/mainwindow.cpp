@@ -23,8 +23,8 @@ MainWindow::MainWindow(QWidget *parent) :
     // Default Qt UI setup declaration.
     ui->setupUi(this);
     // Setting the window flags. The main window should be a window (Qt::Window), it should have a minimise and close
-    // buttons, but maximise should be disabled (Qt::WindowMinimize... & Qt::WindowClose...), and, on Windows, since it
-    // is a window of fixed size, it should look as such (Qt::MSWindowsFixedSize...).
+    // buttons, but no maximise (Qt::WindowMinimize... & Qt::WindowClose...), and, on Windows, since it is a window of
+    // fixed size, it should look as such (Qt::MSWindowsFixedSize...).
     setWindowFlags(Qt::Window | Qt::WindowMinimizeButtonHint | Qt::WindowCloseButtonHint | Qt::MSWindowsFixedSizeDialogHint);
     // Set the locale of the main launcher window to be the system's locale.
     this->setLocale(QLocale::system());
@@ -78,7 +78,7 @@ int MainWindow::startSetup()
         reqserror.critical(this, "Error", reqfilescheck, QMessageBox::Close, QMessageBox::Close);
         // Set a fixed with, otherwise it will be a thousand pixels wide to show each line without a carriage return.
         reqserror.setFixedWidth(200);
-        // Return an error code 404, very cleverly referencing the HTTP error for file not found.
+        // Return an error code 404, very cleverly referencing the HTTP error for File Not Found.
         return 404;
     }
 
@@ -155,7 +155,7 @@ void MainWindow::on_launchButton_clicked()
     // Defaulted to true, made false in case there is an error on the way.
     bool goahead = true;
 
-    // Saving preferences from the main window doesn't seem like the best idea. Best left in the preferences window.
+    // Saving preferences from the main window is not the best idea. Best force save/discard in the preferences dialog.
     /*if(prefsdialog->writePreferences(prefsdialog->preferencesText)==400)
     {
         QMessageBox::StandardButton confirm;
@@ -276,7 +276,7 @@ void MainWindow::on_preferencesButton_clicked()
     // Read the mod's RTW preferences file every time the dialog is to be displayed, so it gets updated every time.
     readPreferences();
     // Since we are reading the data from the preferences file every time it is started, no changes have been made.
-    prefsdialog->setChangesMadeFalse();
+    //prefsdialog->setChangesMadeFalse();
 
     // Show the preferences editor dialog as a modal window.
     prefsdialog->exec();
@@ -319,6 +319,7 @@ void MainWindow::on_defaultsButton_clicked()
     // If the checkboxes are not in their default states.
     if (!checkDefaults())
     {
+        // TODO: De-deprecate functions.
         // Create a QMessageBox StandardButton object that will store the button the user pressed.
         QMessageBox::StandardButton confirm;
         // Create a message box asking the player to confirm if they want to discard their changes and restore defaults.
@@ -334,6 +335,7 @@ void MainWindow::on_defaultsButton_clicked()
 // Private methods:
 
     // Check file/folder existence methods:
+// TODO: Refactor into optiondata
 // Method to check if a file with the specified absolute path exists and is indeed a file.
 bool MainWindow::fileExists(QString abspath)
 {
@@ -562,7 +564,7 @@ int MainWindow::readLauncherData(OptionData *l)
         QMessageBox::critical(this,"Launcher data error!", "Could not find the data file for the launcher (launcher.dat) in the launcher folder."\
                                                            " Check that you have installed the mod correctly and not moved any files in the launcher folder.\n\n",\
                               QMessageBox::Close, QMessageBox::Close);
-        // Return an error code 404, very cleverly referencing the HTTP error for file not found.
+        // Return an error code 404, very cleverly referencing the HTTP error for File Not Found.
         return 404;
     }
 }
@@ -749,6 +751,7 @@ QString MainWindow::playerDataTextGen()
     return dataText;
 }
 
+// TODO: Refactor into Preferences Dialog.
 // Method to read the mod's RTW preferences.txt file.
 int MainWindow::readPreferences()
 {
@@ -883,17 +886,18 @@ int MainWindow::readPreferences()
                         QCheckBox *optioncheckbox = prefsdialog->findChild<QCheckBox *>(linedata[0]);
                         // TODO: Refactor modifier capture.
                         // Get a QList of bools of the modifiers for the checkbox statuses (for more information, see
-                        // preferencesDialog class and the getMods method).
+                        // preferencesDialog class and the getMods method implementation).
                         QList<bool> modifiers = prefsdialog->getMods();
 
                         // Store the 'real' status of the option in the preferences file as a bool. The syntax
-                        // (Bool ? "1" : "0") checks a boolean and assigns a value for thetrue or false check inline.
-                        // If the data in this line after the ':' reads 'TRUE', assign a boolean true, and viceversa.
-                        bool realstatus =  linedata[1] == "TRUE" ? true : false;
+                        // (Bool ? X : Y) checks a boolean and assigns a value for the true or false check inline. If
+                        // the data in this line after the ':' reads 'TRUE', assign the value of X (in this case a
+                        // boolean true), and, if not, assign Y (in this case, a boolean false).
+                        bool realstatus =  (linedata[1] == "TRUE") ? true : false;
 
                         // Convoluted way to mask the true status with the modifier.
                         // Get a QList of all the QCheckBox objects in the preferences dialog.
-                        QList<QCheckBox *> listofboxes = prefsdialog->getListPrefs();
+                        QList<QCheckBox *> listofboxes = prefsdialog->getListCheckboxes();
 
                         // For each QCheckBox object in the list:
                         foreach (QCheckBox *cb, listofboxes)
@@ -1070,7 +1074,7 @@ int MainWindow::checkMapRwm()
                 {
                     QMessageBox::critical(this,"Error!", "The map.rwm file was out of date but could not be deleted.\nPlease try again. If this error persists, check your"\
                                                          " installation.", QMessageBox::Close, QMessageBox::Close);
-                    // Return an error code 404, very cleverly referencing the HTTP error for forbidden.
+                    // Return an error code 404, very cleverly referencing the HTTP error for Forbidden.
                     return 403;
                 }
 
@@ -1103,7 +1107,7 @@ int MainWindow::checkMapRwm()
         QMessageBox::critical(this,"Critical error!", "The base campaign folder was not found. Make sure you have installed the mod correctly,"\
                                                       "and that the launcher is in the location \n[RomeTW install folder]/[mod folder]/[launcher folder]"\
                                                       "/Launcher.exe.", QMessageBox::Close, QMessageBox::Close);
-        // Return an error code 404, very cleverly referencing the HTTP error for file not found.
+        // Return an error code 404, very cleverly referencing the HTTP error for File Not Found.
         return 404;
     }
 }
@@ -1125,6 +1129,7 @@ void MainWindow::resetChecks()
     // Write data and launch game methods:
 // Method to write to the player data file.
 // Takes as parameter a QString that contains the entire contents of the file to write.
+// TODO: Refactor with WritePreferences.
 QString MainWindow::writePlayerData(QString dataToWrite)
 {
     // Create a QFile object pointing to the the absolute file path for the player data file generated using the
@@ -1332,34 +1337,26 @@ QStringList MainWindow::setArguments()
     // Firstly, add the command line for using the current mod.
     arglist.append("-mod:RTR");
 
+    // TODO: Refactor into a loop.
     // Then, manually add each of the checkboxes' respective options if they are currently checked.
     if (ui->showerrBox->isChecked())
         arglist.append("-show_err");
-
     if (ui->neBox->isChecked())
         arglist.append("-ne");
-
     if (ui->nmBox->isChecked())
         arglist.append("-nm");
-
     if (ui->multirunBox->isChecked())
         arglist.append("-multirun");
-
     if (ui->editorBox->isChecked())
         arglist.append("-enable_editor");
-
     if (ui->moviecamBox->isChecked())
         arglist.append("-movie_cam");
-
     if (ui->naBox->isChecked())
         arglist.append("-na");
-
     if (ui->aiBox->isChecked())
         arglist.append("-ai");
-
     if (ui->spritesBox->isChecked())
         arglist.append("-sprite_script");
-
     if (ui->swBox->isChecked())
         arglist.append("-sw");
 

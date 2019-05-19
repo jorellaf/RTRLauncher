@@ -162,7 +162,7 @@
 //
 // Create a struct to handle the options for the campaign, unit roster (export_descr_unit.txt, EDU), or the tree types
 // (specific for RTR) selectors in the main window that are, and must be set up in the launcher data file with syntax
-// [dir/file]:[file path relative to MODFOLDER/data/]|[Option code]|[Display name for the option]|[Option type to be added].
+// [dir/file]:[file path relative to mod/data/]|[Option code]|[Display name for the option]|[Option type to be added].
 struct OptionObject
 {
     QString pathtype; // Type of option, if a directory or path.
@@ -192,7 +192,7 @@ public:
     // 'Setter' method to add an OptionObject to the list at the tail end (append).
     void addObj(OptionObject optionobj);
 
-    // Getter method to obtain the QList of OptionObject structs.
+    // 'Getter' method to obtain the QList of OptionObject structs.
     QList<OptionObject> getListOfObjs();
 
     // 'Getter' method to obtain a QList where the OptionObject.optiontype equals some value passed as a QString objtype.
