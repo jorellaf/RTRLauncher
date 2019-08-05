@@ -4,7 +4,7 @@
 
 // Include Qt classes used in the code.
 #include <QMessageBox>
-#include <QDebug>
+#include <QDir>
 
 // ==================
 // Public methods:
@@ -49,7 +49,7 @@ int PreferencesDialog::writePreferences(QString dataToWrite)
 {
     // Create a QFile object pointing to the the absolute file path for the mod's RTW preferences file generated using
     // the relative path defined in optiondata.h (since we'll overwrite it, there's no reason to check if it exists).
-    QFile preferencesData(QCoreApplication::applicationDirPath() + preferencesFilePath);
+    QFile preferencesData(QDir::cleanPath(QDir::currentPath() + preferencesFilePath));
 
     // If the file cannot be opened (or created) in write-only mode, and its contents discarded (with Truncate):
     if (!preferencesData.open(QIODevice::WriteOnly | QIODevice::Truncate))

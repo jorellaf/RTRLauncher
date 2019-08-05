@@ -224,7 +224,7 @@ void MainWindow::on_launchButton_clicked()
     {
         // QFileInfo object for the RTW executable to launch, assuming the user has correctly installed the launcher in
         // [RomeTW/MODFOLDER/Launcher]. Path has to be absolute, otherwise it does not work.
-        QFileInfo rtwexec(QCoreApplication::applicationDirPath() + "/../../RomeTW-ALX.exe");
+        QFileInfo rtwexec(QDir::cleanPath(QDir::currentPath() + "/../../RomeTW-ALX.exe"));
         // Check if the game executable can be found, is actually a file, and is executable, just to be sure.
         if (rtwexec.exists() && rtwexec.isFile() && rtwexec.isExecutable())
         {
@@ -239,7 +239,7 @@ void MainWindow::on_launchButton_clicked()
             // Launch the game with the command line arguments requested by the user, as well as the mod name, making
             // sure the game is not closed when the launcher is closed.
             QProcess *process = new QProcess(this);
-            if (process->startDetached(execabspath,commands,QCoreApplication::applicationDirPath() + "/../.."))
+            if (process -> startDetached(execabspath, commands, QDir::cleanPath(QDir::currentPath() + "/../..")))
                 // Close the launcher by quitting the application
                 // (though it would be better if it returned 0 to the main, but alas).
                 QApplication::quit();
@@ -365,16 +365,16 @@ QString MainWindow::launcherReqFilesCheck()
     // Assuming launcher will be located in [RTW/MODFOLDER/Launcher/]:
     // If no game executable is not found, add an error message to the string. Note that fileExists() and dirExists()
     // both require the file path parameter to be an absolute path.
-    if (!fileExists(QCoreApplication::applicationDirPath() + "/../../RomeTW-ALX.exe"))
+    if (!fileExists(QDir::cleanPath(QDir::currentPath() + "/../../RomeTW-ALX.exe")))
         returnstring += "The Rome: Total War - Alexander executable was not found. Make sure you have installed the mod correctly,"\
                         "and that the launcher is in the location \n[RomeTW install folder]/[mod folder]/[launcher folder]/Launcher.exe.\n\n";
 
     // If the mod data folder was not found, add an error message to the string.
-    if (!dirExists(QCoreApplication::applicationDirPath() + "/../data"))
+    if (!dirExists(QDir::cleanPath(QDir::currentPath() + "/../data")))
         returnstring += "The mod data folder was not found. Make sure you have installed the mod correctly\n\n";
 
     // If the launcher data file was not found, add an error message to the string.
-    if (!fileExists(QCoreApplication::applicationDirPath() + launcherDataFilePath))
+    if (!fileExists(QDir::cleanPath(QDir::currentPath() + launcherDataFilePath)))
         returnstring += "Could not find the data file for the launcher (launcher.dat) in the launcher folder. Check that you have installed the mod correctly"\
                         " and not moved any files in the launcher folder.\n\n";
 
@@ -393,7 +393,7 @@ QString MainWindow::launcherReqFilesCheck()
 int MainWindow::readLauncherData(OptionData *l)
 {
     // Generate the absolute file path for the launcher data file using the relative path defined in optiondata.h.
-    QString launcherdatafilepath = QCoreApplication::applicationDirPath() + launcherDataFilePath;
+    QString launcherdatafilepath = QDir::currentPath() + launcherDataFilePath;
 
     // Check if the data file exists.
     if (fileExists(launcherdatafilepath))
@@ -509,9 +509,9 @@ int MainWindow::readLauncherData(OptionData *l)
                                 {
                                     // If no errors have been detected so far, begin properly parsing the option data.
                                     // Create a QDir object to generate the absolute path for the option file/folder.
-                                    QDir objpathdir(QCoreApplication::applicationDirPath() + "/../data" + objpath);
+                                    QDir objpathdir(QDir::cleanPath(QDir::currentPath() + "/../data" + objpath));
 
-                                    /*QDir datadir(QCoreApplication::applicationDirPath() + "/../data");
+                                    /*QDir datadir(QDir::cleanPath(QDir::currentPath() + "/../data"));
                                     if (objpathdir == datadir)
                                         warningtext += QString("Error at line %1: cannot use data folder as an option.\n").arg(linenumber);
                                     else
@@ -573,7 +573,7 @@ int MainWindow::readLauncherData(OptionData *l)
 void MainWindow::readPlayerData()
 {
     // Generate the absolute file path for the player data file using the relative path defined in optiondata.h.
-    QString playerdatapath = QCoreApplication::applicationDirPath() + playerDataFilePath;
+    QString playerdatapath = QDir::currentPath() + playerDataFilePath;
 
     // Check if the data file exists.
     if (fileExists(playerdatapath))
@@ -769,9 +769,9 @@ int MainWindow::readPreferences()
     maxresolutions.append(po);
 
     // Generate the absolute file path for the RTW preferences file using the relative path defined in optiondata.h.
-    QString prefpath = QCoreApplication::applicationDirPath() + preferencesFilePath;
+    QString prefpath = QDir::currentPath() + preferencesFilePath;
     // Generate the absolute path for the RTW preferences directory.
-    QString prefFolder = QCoreApplication::applicationDirPath() + "/../preferences";
+    QString prefFolder = QDir::cleanPath(QDir::currentPath() + "/../preferences");
 
     // Check if the preferences directory does not exist yet.
     if (!dirExists(prefFolder))
@@ -1017,7 +1017,7 @@ bool MainWindow::checkDefaults()
 int MainWindow::checkMapRwm()
 {
     // Create a QDir object pointing to the campaign map's base directory.
-    QDir basedir(QCoreApplication::applicationDirPath() + "/../data/world/maps/base");
+    QDir basedir(QDir::cleanPath(QDir::currentPath() + "/../data/world/maps/base"));
 
     // Check if the base directory exists.
     if (basedir.exists())
@@ -1134,7 +1134,7 @@ QString MainWindow::writePlayerData(QString dataToWrite)
 {
     // Create a QFile object pointing to the the absolute file path for the player data file generated using the
     // relative path defined in optiondata.h (since we'll overwrite it, there's no reason to check if it exists).
-    QFile playerData(QCoreApplication::applicationDirPath() + playerDataFilePath);
+    QFile playerData(QDir::cleanPath(QDir::currentPath() + playerDataFilePath));
 
     // If the file cannot be opened (or created) in write-only mode, and its contents discarded (with Truncate):
     if (!playerData.open(QIODevice::WriteOnly | QIODevice::Truncate))
@@ -1204,7 +1204,7 @@ QString MainWindow::filefolderSwitch(QComboBox *combobox, QList<OptionObject> op
             if (dirExists(o.abspath))
             {
                 // Make a QDir object pointing to the option directory (assuming the launcher is in the right folder).
-                QDir data(QCoreApplication::applicationDirPath() + "/../data");
+                QDir data(QDir::cleanPath(QDir::currentPath() + "/../data"));
 
                 // If the copyRecursively option was successful, return an errorless empty string.
                 if (copyRecursively(o.abspath,data.absolutePath()))
@@ -1223,7 +1223,7 @@ QString MainWindow::filefolderSwitch(QComboBox *combobox, QList<OptionObject> op
             QFile srcfile(o.abspath);
 
             // Make a QFileInfo pointing to the file we will replace (asusming the launcher is in the right folder).
-            QFileInfo destfileinfo(QCoreApplication::applicationDirPath() + "/../data/" + srcfileinfo.fileName());
+            QFileInfo destfileinfo(QDir::cleanPath(QDir::currentPath() + "/../data/" + srcfileinfo.fileName()));
             // Make a string of the absolute path of the file we will replace.
             QString destfilepath(destfileinfo.absoluteFilePath());
 
