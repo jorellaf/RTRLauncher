@@ -28,7 +28,7 @@ PreferencesDialog::PreferencesDialog(QWidget *parent) :
     // make the default checkbox configuration convoluted, since in the default configuration, some would have to be
     // checked, so, to have the default be all the checkboxes unchecked we need to mask their checked status.
     // TODO: Refactor into single variable.
-    prefmodifiers = {false,true,false,true,true,true,false};
+    prefmodifiers = {false,true,false,true,true,false};
     listofcheckboxes = {ui->SHOW_BANNERS, ui->DISABLE_ARROW_MARKERS, ui->UNIT_EXPERIENCE_UPGRADE_EFFECT, ui->MINIMAL_UI,
                             ui->UNLIMITED_MEN_ON_BATTLEFIELD, ui->AUTO_SAVE};
 

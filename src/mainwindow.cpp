@@ -225,6 +225,12 @@ void MainWindow::on_launchButton_clicked()
         // QFileInfo object for the RTW executable to launch, assuming the user has correctly installed the launcher in
         // [RomeTW/MODFOLDER/Launcher]. Path has to be absolute, otherwise it does not work.
         QFileInfo rtwexec(QDir::cleanPath(QDir::currentPath() + "/../../RomeTW-ALX.exe"));
+        // If the current installation is a Steam installation, we need to use the testappa.exe file instead, so check if
+        // it exists (to check if it's a Steam install) and set that as our rtwexec file.
+        if (fileExists(QDir::cleanPath(QDir::currentPath() + "/../../testappa.exe")))
+        {
+            QFileInfo rtwexec(QDir::cleanPath(QDir::currentPath() + "/../../testappa.exe"));
+        }
         // Check if the game executable can be found, is actually a file, and is executable, just to be sure.
         if (rtwexec.exists() && rtwexec.isFile() && rtwexec.isExecutable())
         {
@@ -1336,6 +1342,7 @@ QStringList MainWindow::setArguments()
     // TODO: Refactor to use other mods.
     // Firstly, add the command line for using the current mod.
     arglist.append("-mod:RTR");
+    arglist.append("-noalexander");
 
     // TODO: Refactor into a loop.
     // Then, manually add each of the checkboxes' respective options if they are currently checked.
