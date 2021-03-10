@@ -437,8 +437,10 @@ int MainWindow::readLauncherData(OptionData *l)
         QStringList linedata = {""};
         // A list of QStrings to store the elements of each option (file/folder path, code, name, type).
         QStringList objargs = {""};
-        // QString to store the file/folder path of each option.
-        QString objpath = "";
+        // QString to store the source file/folder path of each option.
+        QString objsrcpath = "";
+        // QString to store the destination folder path of each option. The default destination is the RTR data folder.
+        QString objdstpath = "/RTR/data/";
 
         // While we are still not at the end of the file:
         while (!in.atEnd())
@@ -455,9 +457,9 @@ int MainWindow::readLauncherData(OptionData *l)
                 // Split the data behind any comment character ('//') by the character ':'.
                 linedata = line.split("//")[0].split(":");
 
-                // Check if there is nothing after the ':', or if what follows is not split in four elements
-                // (path|code|name|type) by the '|' divider, or if there is nothing behind the ':' character:
-                if (linedata[1] == "" || linedata[1].split("|").size() != 4 || linedata[0] == "")
+                // Check if there is nothing after the ':', or if what follows is not split in five elements
+                // (srcpath|dstpath|code|name|type) by the '|' divider, or if there is nothing behind the ':' character:
+                if (linedata[1] == "" || linedata[1].split("|").size() != 5 || linedata[0] == "")
                     // If so, add a warning to the warning string.
                     warningtext += QString("Error at line %1: argument number is not valid.\n").arg(linenumber);
                 else
@@ -471,60 +473,80 @@ int MainWindow::readLauncherData(OptionData *l)
                         // If not, split the data after the ':' by the '|' dividing character.
                         objargs = linedata[1].split("|");
 
-                        // Check if any of the four elements is not empty:
-                        if (objargs[0]=="" || objargs[1]=="" || objargs[2]=="" || objargs[3]=="")
+                        // Check if any of the elements (besides dstpath, since default is /RTR/Data) is not empty:
+                        if (objargs[0]=="" || objargs[2]=="" || objargs[3]=="" || objargs[4]=="")
                             // If so, add a warning to the warning string.
                             warningtext += QString("Error at line %1: invalid empty argument.\n").arg(linenumber);
                         else
                         {
                             // If not, get the object path, and convert any backslash (has to be escaped with another
                             // one here) to a forward slash, to allow for the use of either type.
-                            objpath = objargs[0].split("\\").join("/");
+                            objsrcpath = objargs[0].split("\\").join("/");
 
                             // If there is no forward slash at the front of the path in the file, add one, as it is
                             // required in order to create the path for the Qt file/folder objects.
-                            if (objpath.front() != "/")
-                                objpath = QString("/" + objpath);
+                            if (objsrcpath.front() != "/")
+                                objsrcpath = QString("/" + objsrcpath);
 
                             // Check if, for files, there are fewer than two forward slashes in the path (/x/file.y).
-                            if (linedata[0] == "file" && objpath.split("/").size() < 3 )
+                            if (linedata[0] == "file" && objsrcpath.split("/").size() < 3 )
                                 // If so, add a warning to the warning string, since this would be invalid.
-                                warningtext += QString("Error at line %1: file path is invalid (must be inside a folder inside /data/).\n").arg(linenumber);
+                                warningtext += QString("Error at line %1: file path is invalid (must be inside its own folder folder inside /RTR/).\n").arg(linenumber);
                             // Else, check if the file name at the end of the path is an empty string.
-                            else if (linedata[0] == "file" && objpath.split("/").last() == "")
+                            else if (linedata[0] == "file" && objsrcpath.split("/").last() == "")
                                 // If so, add a warning to the warning string.
                                 warningtext += QString("Error at line %1: file name is invalid.\n").arg(linenumber);
                             // Else, check if there are any empty folder sequences ('//') for either files or folders.
-                            else if (objpath.split("//").size()>1)
+                            else if (objsrcpath.split("//").size()>1)
                                 // If so, add a warning to the warning string.
                                 warningtext += QString("Error at line %1: empty folder names are not allowed. If you used '//' as a divider, please change it to '/' or '\'.\n")\
                                         .arg(linenumber);
                             // Else, check if the user tried to go up a level in the folder tree with '..'.
-                            else if (objpath.split("..").size()>1)
+                            else if (objsrcpath.split("..").size()>1)
                                 // If so, add a warning to the warning string.
                                 warningtext += QString("Error at line %1: you may not go a level higher in the folder tree.\n").arg(linenumber);
                             else
                             {
                                 // TODO: Refactor and make expansible.
+                                // If none of these issues were detected, check if we should parse the destination path
+                                if (objargs[1]!="")
+                                {
+                                    objdstpath = objargs[1].split("\\").join("/");
+
+                                    // If there is no forward slash at the front of the path in the file, add one, as it is
+                                    // required in order to create the path for the Qt file/folder objects.
+                                    if (objdstpath.front() != "/")
+                                        objdstpath = QString("/" + objdstpath);
+                                    // If there is no forward slash at the end of the path in the file, add one, as it should be a folder.
+                                    if (objdstpath.back() != "/")
+                                        objdstpath = QString("/" + objdstpath);
+
+                                    // Else, check if there are any empty folder sequences ('//') for either files or folders.
+                                    else if (objdstpath.split("//").size()>1)
+                                        // If so, add a warning to the warning string.
+                                        warningtext += QString("Error at line %1: empty folder names are not allowed. If you used '//' as a divider, please change it to '/' or '\'.\n")\
+                                                .arg(linenumber);
+                                    // Else, check if the user tried to go up a level in the folder tree with '..'.
+                                    else if (objdstpath.split("..").size()>1)
+                                        // If so, add a warning to the warning string.
+                                        warningtext += QString("Error at line %1: you may not go a level higher in the folder tree.\n").arg(linenumber);
+                                }
                                 // If none of these issues were detected, check if the option type is not any of the
                                 // allowed options.
-                                if (objargs[3] != "edu" && objargs[3] != "camp" && objargs[3] != "trees")
+                                if (objargs[4] != "edu" && objargs[4] != "camp" && objargs[4] != "trees")
                                     // If so, add a warning to the warning string.
-                                    warningtext += QString("Error at line %1: invalid option type '%2'.\n").arg(linenumber).arg(objargs[3]);
+                                    warningtext += QString("Error at line %1: invalid option type '%2'.\n").arg(linenumber).arg(objargs[4]);
                                 else
                                 {
                                     // If no errors have been detected so far, begin properly parsing the option data.
                                     // Create a QDir object to generate the absolute path for the option file/folder.
-                                    QDir objpathdir(QDir::cleanPath(QDir::currentPath() + "/../data" + objpath));
-
-                                    /*QDir datadir(QDir::cleanPath(QDir::currentPath() + "/../data"));
-                                    if (objpathdir == datadir)
-                                        warningtext += QString("Error at line %1: cannot use data folder as an option.\n").arg(linenumber);
-                                    else
-                                    {*/
+                                    QDir objsrcpathdir(QDir::cleanPath(QDir::currentPath() + "/../" + objsrcpath));
+                                    // If no errors have been detected so far, begin properly parsing the option data.
+                                    // Create a QDir object to generate the absolute path for the option file/folder, based on the RTW folder.
+                                    QDir objdstpathdir(QDir::cleanPath(QDir::currentPath() + "/../../" + objdstpath));
 
                                     // Add the data into an OptionObject struct.
-                                    o = {linedata[0],objpathdir.absolutePath(),objargs[1],objargs[2],objargs[3]};
+                                    o = {linedata[0],objsrcpathdir.absolutePath(),objdstpathdir.absolutePath(),objargs[2],objargs[3],objargs[4]};
                                     // Add the OptionObject into the OptionData list.
                                     l->addObj(o);
                                 }
@@ -538,14 +560,14 @@ int MainWindow::readLauncherData(OptionData *l)
         // If we have any options using directories, go through them and check if the directories chosen exist:
         if (l->getListOfDirs().size()>0)
             foreach (OptionObject oo, l->getListOfDirs())
-                if (!dirExists(oo.abspath))
+                if (!dirExists(oo.abssrcpath))
                     // If a directory cannot be found, add a warning to the QString.
                     warningtext += QString("Directory error: directory chosen for option '%1' cannot be found. Verify your installation or your launcher data file.\n").arg(oo.displayname);
 
         // If we have any options using files, go through them and check if the files chosen exist:
         if (l->getListOfFiles().size()>0)
             foreach (OptionObject fo, l->getListOfFiles())
-                if (!fileExists(fo.abspath))
+                if (!fileExists(fo.abssrcpath))
                     // If a file cannot be found, add a warning to the QString.
                     warningtext += QString("File error: file chosen for option '%1' cannot be found. Verify your installation or your launcher data file.\n").arg(fo.displayname);
 
@@ -1207,13 +1229,10 @@ QString MainWindow::filefolderSwitch(QComboBox *combobox, QList<OptionObject> op
         if (o.pathtype=="dir")
         {
             // Check if it exists by using its absolute path, and if so:
-            if (dirExists(o.abspath))
+            if (dirExists(o.abssrcpath))
             {
-                // Make a QDir object pointing to the option directory (assuming the launcher is in the right folder).
-                QDir data(QDir::cleanPath(QDir::currentPath() + "/../data"));
-
                 // If the copyRecursively option was successful, return an errorless empty string.
-                if (copyRecursively(o.abspath,data.absolutePath()))
+                if (copyRecursively(o.abssrcpath,o.absdstpath))
                     return "";
                 // Otherwise, return an error message string saying the folder for the current option could not be copied.
                 else
@@ -1222,14 +1241,14 @@ QString MainWindow::filefolderSwitch(QComboBox *combobox, QList<OptionObject> op
         }
 
         // If we have reached this point, the path type was a file, so check if it exists by using its absolute path.
-        if (fileExists(o.abspath))
+        if (fileExists(o.abssrcpath))
         {
             // If it does, make a QFileInfo and QFile objects pointing to the option's absolute path.
-            QFileInfo srcfileinfo(o.abspath);
-            QFile srcfile(o.abspath);
+            QFileInfo srcfileinfo(o.abssrcpath);
+            QFile srcfile(o.abssrcpath);
 
-            // Make a QFileInfo pointing to the file we will replace (asusming the launcher is in the right folder).
-            QFileInfo destfileinfo(QDir::cleanPath(QDir::currentPath() + "/../data/" + srcfileinfo.fileName()));
+            // Make a QFileInfo pointing to the file we will replace (assuming the launcher is in the right folder).
+            QFileInfo destfileinfo(o.absdstpath + srcfileinfo.fileName());
             // Make a string of the absolute path of the file we will replace.
             QString destfilepath(destfileinfo.absoluteFilePath());
 
