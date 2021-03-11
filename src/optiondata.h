@@ -166,7 +166,8 @@
 struct OptionObject
 {
     QString pathtype; // Type of option, if a directory or path.
-    QString abspath; // Path of the option file or directory. Must be stored as an absolute path in the struct.
+    QString abssrcpath; // Path of the option source file or directory. Must be stored as an absolute path in the struct.
+    QString absdstpath; // Path of the option destination directory. Must be stored as an absolute path in the struct.
     QString optioncode; // Option code is the internal codename for the option in question.
     QString displayname; // Name that will be displayed in the UI.
     QString optiontype; // The option is for which selector (available so far are 'camp', 'edu', and 'trees').

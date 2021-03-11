@@ -56,6 +56,8 @@ private slots:
     // Slot for the restore defaults button.
     void on_defaultsButton_clicked();
 
+    void on_delmapButton_clicked();
+
 private:
             // Variables.
     // MainWindow class.
@@ -108,7 +110,7 @@ private:
     bool checkDefaults();
 
     // Method to check whether the map.rwm file is up to date to the rest of the contents of the other map files.
-    int checkMapRwm();
+    int checkMapRwm(bool force_delete=false);
 
         // Reset options methods:
     // Method to reset the checkboxes to their default states (reset to defaults).
@@ -123,7 +125,7 @@ private:
     QString filefolderSwitch(QComboBox *combobox, QList<OptionObject> launcheroptionslist);
 
     // Method to copy folders recursively and paste them recursively to their destination.
-    bool copyRecursively(QString sourcedirpath, QString destdirpath);
+    QList<bool> copyRecursively(QString sourcedirpath, QString destdirpath, QList<bool> success_and_basemapcopy={false, false});
 
     // Method to store the command line arguments to use when launching the executable into a QStringList.
     QStringList setArguments();

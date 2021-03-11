@@ -10,6 +10,7 @@
 #include <QMessageBox>
 #include <QDateTime>
 #include <QLocale>
+#include <QCryptographicHash>
 
 // ==================
 // Public methods:
@@ -218,6 +219,40 @@ void MainWindow::on_launchButton_clicked()
     // QStringList object with the selected options by calling the setArguments method.
     QStringList commands = setArguments();
 
+    // If the checkbox to always check and update the map.RWM file is checked:
+    if (ui->maprwmBox->isChecked())
+    {
+        // Make the check and store the returned integer in 'result'.
+        int result = checkMapRwm();
+
+        // Check the value of result and:
+        switch (result)
+        {
+        // If the case is 403 (map.RWM deletion not successful):
+        case 403:
+            // Make a QMessageBox StandardButton object that will store the button the user pressed.
+            QMessageBox::StandardButton confirm;
+
+            // TODO: De-deprecate functions.
+            // Create a message box asking the player to confirm if they want to continue launching the game even though
+            // the map.RWM file could not be deleted, with the default button (when pressing enter) being no.
+            confirm = QMessageBox::warning(this,"Continue launching?", "The map file could not be deleted and will be out of date.\n"\
+                                                                       "Would you like to continue launching the game?", QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+
+            // If the button pressed was the 'No' button:
+            if (confirm == QMessageBox::No)
+                // Set the first item of the arguments list to 'n' to indicate the launch should not go on.
+                commands[0] = "n";
+            break;
+
+        // If the case is 404 (campaign map base folder not found):
+        case 404:
+            // Set the first item of the arguments list to 'n' to indicate the launch should not go on.
+            commands[0] = "n";
+            break;
+        }
+    }
+
     // If we have arrived all the way to here without any errors (goahead == true), and if the returned list of
     // commands is not just 'n' (do not proceed) then proceed to take-off.
     if (goahead == true && commands[0]!="n")
@@ -296,6 +331,16 @@ void MainWindow::on_saveButton_clicked()
 
     // Try to save the player data file with the QString we generated above and store the returned error string.
     QString errstring = writePlayerData(dataText);
+
+    // TODO: Refactor the Player Option into its own class, with its own getter methods and make a comparison here between selected option and previous option.
+    // Append the string returned by the file/folder switch method (error text or nothing) to the errortext variable,
+    // which we call by sending the desired combobox and OptionData object with the desired option type.
+    // EDU switch:
+    errstring += filefolderSwitch(ui->eduComboBox, launcheroptionslist.getListOfEdus());
+    // Campaign switch
+    errstring += filefolderSwitch(ui->campComboBox, launcheroptionslist.getListOfCamps());
+    // Trees switch
+    errstring += filefolderSwitch(ui->treesComboBox, launcheroptionslist.getListOfTrees());
 
     // If writing the player data file was successful (returned an empty error string), inform the player.
     if (errstring == "")
@@ -422,7 +467,7 @@ int MainWindow::readLauncherData(OptionData *l)
         in.setCodec("UTF-8");
 
         // Initialise an OptionObject struct to use for appending options to the list of options.
-        OptionObject o = {"","","","",""};
+        OptionObject o = {"","","","","",""};
 
         // Create a QString to store any possible errors and warnings that come up when reading the file.
         QString warningtext="";
@@ -1042,7 +1087,8 @@ bool MainWindow::checkDefaults()
 }
 
 // Method to check whether the map.rwm file is up to date to the rest of the contents of the other map files.
-int MainWindow::checkMapRwm()
+// A parameter of force_delete disregards timestamp checks, and is set by default to false in the header.
+int MainWindow::checkMapRwm(bool force_delete)
 {
     // Create a QDir object pointing to the campaign map's base directory.
     QDir basedir(QDir::cleanPath(QDir::currentPath() + "/../data/world/maps/base"));
@@ -1061,38 +1107,48 @@ int MainWindow::checkMapRwm()
             // If it does, create a QFileInfo object pointing to the absolute path of the file.
             QFileInfo maprwm(maprwmpath);
 
-            // Store the timestamp of the last modification of the map.RWM file to compare with the raw map files.
-            QDateTime mapmod = maprwm.lastModified();
-
-            // Store the list of files in the base folder into a QFileInfoList object to check if the map is up-to-date.
-            QFileInfoList filelist = basedir.entryInfoList(QDir::Files);
-
             // Create a bool to signal whether the map.RWM needs to be deleted or not, initialise it as false.
             bool needsdel = false;
 
-            // For each file (as a QFileInfo object) in the list of files:
-            foreach (QFileInfo fileinfo, filelist)
+            // Create a QString to store the beginning of the error message, to make it more modular to the options availaable
+            // (force delete, check timestamps, and their success or failure).
+            QString message = "The map.rwm file ";
+
+            if (!force_delete)
             {
-                // If so, store the extension of the current file we are processing.
-                QString ext = fileinfo.suffix();
+                // If we don't force delete, we make allusions to how we checked timestamps, and how it was out of date.
+                message += "was out of date ";
 
-                // Check if the extension is either .TGA or .TXT, since those are the only relevant ones.
-                if (ext=="tga" || ext=="txt")
+                // Store the timestamp of the last modification of the map.RWM file to compare with the raw map files.
+                QDateTime mapmod = maprwm.lastModified();
+
+                // Store the list of files in the base folder into a QFileInfoList object to check if the map is up-to-date.
+                QFileInfoList filelist = basedir.entryInfoList(QDir::Files);
+
+                // For each file (as a QFileInfo object) in the list of files:
+                foreach (QFileInfo fileinfo, filelist)
                 {
-                    // If it is, then store the timestamp of the last modification.
-                    QDateTime filemod = fileinfo.lastModified();
+                    // If so, store the extension of the current file we are processing.
+                    QString ext = fileinfo.suffix();
 
-                    // Check if the current file was modified after the map file by comparing the timestamps.
-                    if (mapmod < filemod)
+                    // Check if the extension is either .TGA or .TXT, since those are the only relevant ones.
+                    if (ext=="tga" || ext=="txt")
                     {
-                        // If it was, signal that we need to delete the map.RWM file.
-                        needsdel = true;
+                        // If it is, then store the timestamp of the last modification.
+                        QDateTime filemod = fileinfo.lastModified();
+
+                        // Check if the current file was modified after the map file by comparing the timestamps.
+                        if (mapmod < filemod)
+                        {
+                            // If it was, signal that we need to delete the map.RWM file.
+                            needsdel = true;
+                        }
                     }
                 }
             }
 
             // Check if we need to delete the map.RWM file.
-            if (needsdel)
+            if (needsdel || force_delete)
             {
                 // If we do, create a QFile object pointing to the absolute path of the map.RWM file.
                 QFile maprwmfile(maprwmpath);
@@ -1100,14 +1156,20 @@ int MainWindow::checkMapRwm()
                 // Try to remove it, and, if not successful, send a critical error
                 if (!maprwmfile.remove())
                 {
-                    QMessageBox::critical(this,"Error!", "The map.rwm file was out of date but could not be deleted.\nPlease try again. If this error persists, check your"\
+                    // First, if we talked about the file being out of date, add a conjunction.
+                    if (!force_delete)
+                        message += "but ";
+                    QMessageBox::critical(this,"Error!", message + "could not be deleted.\nPlease try again. If this error persists, check your"\
                                                          " installation.", QMessageBox::Close, QMessageBox::Close);
                     // Return an error code 404, very cleverly referencing the HTTP error for Forbidden.
                     return 403;
                 }
 
+                // First, if we talked about the file being out of date, add a conjunction.
+                if (!force_delete)
+                    message += "and ";
                 // Otherwise, inform the user of our success and the generation process, and return an all ok '0'.
-                QMessageBox::information(this,"Success", "The map.rwm file was out of date and was successfully deleted.\nAn up-to-date file will be generated by the game"\
+                QMessageBox::information(this,"Success", message + "was successfully deleted.\nAn up-to-date file will be generated by the game"\
                                                          " at launch.", QMessageBox::Close, QMessageBox::Close);
                 return 0;
             }
@@ -1231,9 +1293,18 @@ QString MainWindow::filefolderSwitch(QComboBox *combobox, QList<OptionObject> op
             // Check if it exists by using its absolute path, and if so:
             if (dirExists(o.abssrcpath))
             {
-                // If the copyRecursively option was successful, return an errorless empty string.
-                if (copyRecursively(o.abssrcpath,o.absdstpath))
+                // Get the results of the recusive copy of each option.
+                QList<bool> success_and_basemapcopy = copyRecursively(o.abssrcpath,o.absdstpath);
+
+                // If the copyRecursively option was successful:
+                if (success_and_basemapcopy[0])
+                {
+                    // Check if we need to delete the map.rwm file, and do so.
+                    if(success_and_basemapcopy[1])
+                        checkMapRwm(true);
+                    // Finally, return an empty error string.
                     return "";
+                }
                 // Otherwise, return an error message string saying the folder for the current option could not be copied.
                 else
                     return QString("The folder for the game type '%1' could not be copied.\n").arg(o.displayname);
@@ -1280,14 +1351,14 @@ QString MainWindow::filefolderSwitch(QComboBox *combobox, QList<OptionObject> op
 // Method to copy folders recursively and paste them recursively to their destination.
 // Require QStrings of the paths of the source and destination directories.
 // Function taken and adapted from https://forum.qt.io/topic/59245/is-there-any-api-to-recursively-copy-a-directory-and-all-it-s-sub-dirs-and-files/3
-bool MainWindow::copyRecursively(QString sourcedirpath, QString destdirpath)
+// The success_and_basemapcopy parameter is a QList of bools to indicate the success of the operation,
+// as well as whether any file in the data/world/maps/base folder was replaced, to force a map.rwm deletion.
+// Both are set to false by default in the header, and have two indices. The first informs success, the second, /maps/base change.
+QList<bool> MainWindow::copyRecursively(QString sourcedirpath, QString destdirpath, QList<bool> success_and_basemapcopy)
 {
-    // Declare a variable to indicate the success of the operation, and set it to false for now.
-    bool success = false;
-
     // If the source directory does not exist, return false.
     if(!dirExists(sourcedirpath))
-        return false;
+        return {false, false};
 
     // If the destination directory does not exist:
     if(!dirExists(destdirpath))
@@ -1308,20 +1379,74 @@ bool MainWindow::copyRecursively(QString sourcedirpath, QString destdirpath)
         QString srcpath = sourcedirpath + QDir::separator() + files[i];
         QString destpath = destdirpath + QDir::separator() + files[i];
 
-        // If the file we want to replace exists, we need to delete it first, since copy() does not overwrite:
+        // We declare a variable to confirm whether the file needs replacing or not.
+        bool needsrep = false;
+
+        // If the file we want to replace exists, we first check if we need to replace it:
         if (fileExists(destpath))
         {
-            // Make a QFile pointing to the file to replace and delete it (through remove()).
-            QFile filetorm(destpath);
-            filetorm.remove();
+            // We make QFile objects for the source and destination paths.
+            QFile srcfile(srcpath);
+            QFile dstfile(destpath);
+
+            // We check whether the files have the same modification times. If not, we might need to replace them.
+            // Idea taken and adapted from https://stackoverflow.com/a/1761709.
+            if(QFileInfo(srcpath).lastModified() != QFileInfo(destpath).lastModified())
+            {
+                // If we can open both files as ReadOnly:
+                if(srcfile.open(QFile::ReadOnly) && dstfile.open(QFile::ReadOnly))
+                {
+                    // We try to hash them. We first make QCryptographicHash objects to do an MD5 hash to each file.
+                    // Snippet taken and adapted from https://stackoverflow.com/a/16383433.
+                    QCryptographicHash srchash(QCryptographicHash::Md5);
+                    QCryptographicHash dsthash(QCryptographicHash::Md5);
+
+                    // If we can add the file data to the hash objects to get a hash:
+                    if (srchash.addData(&srcfile) && dsthash.addData(&dstfile))
+                    {
+                        // We check if the hashes are not the same. If they are not, we proceed with replacing the file.
+                        if (srchash.result() != dsthash.result())
+                        {
+                            // We indicate that the file needs replacing.
+                            needsrep = true;
+                        }
+                    }
+                    // If we couldn't get a hash, we try to replace them anyways to be safe.
+                    else
+                        needsrep = true;
+
+                    srcfile.close();
+                    dstfile.close();
+                }
+                // If we couldn't open the files, we try to replace them anyways to be safe.
+                else
+                    needsrep = true;
+            }
+
+            // If we do need to replace the file:
+            if (needsrep == true)
+            {
+                // Get the QFile we made for the destination file and delete it (through remove()).
+                // We need to delete it first, since copy() does not overwrite.
+                // If the deletion was not successful, return false.
+                if(!dstfile.remove())
+                    return {false,false};
+
+                // Assign the success of copying the source file to its destination to the boolean success variable.
+                success_and_basemapcopy[0] = QFile::copy(srcpath, destpath);
+
+                // If the copying was not successful, return false.
+                if(!success_and_basemapcopy[0])
+                    return {false,false};
+
+                // If the current destination directory is the same as the directory of /maps/base, or if /maps/base has been altered earlier:
+                if (QDir(destpath).absolutePath().indexOf(QDir(QDir::currentPath() + "/../data/world/maps/base").absolutePath()) != -1 || success_and_basemapcopy[1])
+                    // Set the basemapcopy part of the variable as true.
+                    success_and_basemapcopy[1] = true;
+            }
+            else
+                success_and_basemapcopy[0] = true;
         }
-
-        // Assign the success of copying the source file to its destination to the boolean success variable.
-        success = QFile::copy(srcpath, destpath);
-
-        // If the copying was not successful, return false.
-        if(!success)
-            return false;
     }
 
     // Clear the list of files of its contents.
@@ -1337,19 +1462,26 @@ bool MainWindow::copyRecursively(QString sourcedirpath, QString destdirpath)
         QString srcname = sourcedirpath + QDir::separator() + files[i];
         QString destname = destdirpath + QDir::separator() + files[i];
 
-        // Call the function recursively for the current folder and set the boolean success variable to match the
-        // result of the success status of the recursive function call.
-        success = copyRecursively(srcname, destname);
+        // TODO: Make modular.
+        // If the file does not start with the ignore tag ('[ign]'):
+        if (!srcname.startsWith("[ign]", Qt::CaseInsensitive))
+        {
+            // Call the function recursively for the current folder and set the boolean success variable to match the
+            // result of the success status of the recursive function call.
+            success_and_basemapcopy = copyRecursively(srcname, destname, success_and_basemapcopy);
 
-        // If the recursive copying was not successful, return false.
-        if(!success)
-            return false;
+            // If the recursive copying was not successful, return false.
+            if(!success_and_basemapcopy[0])
+                return {false, false};
+        }
     }
 
     // We can only reach this point if all folders and files were copied successfully (otherwise, there would have been
     // a return boolean of false, which would have been propagated upwards to the initial call by all the if(!success)
-    // checks, regardless of the position in the recursion chain), so return true.
-    return true;
+    // checks, regardless of the position in the recursion chain), so check if we copied within /maps/base.
+
+    // Return the QList of bools for the success and basemapcopy.
+    return success_and_basemapcopy;
 }
 
 // Method to store the command line arguments to use when launching the executable into a QStringList.
@@ -1386,40 +1518,12 @@ QStringList MainWindow::setArguments()
     if (ui->swBox->isChecked())
         arglist.append("-sw");
 
-    // If the checkbox to always check and update the map.RWM file is checked:
-    if (ui->maprwmBox->isChecked())
-    {
-        // Make the check and store the returned integer in 'result'.
-        int result = checkMapRwm();
-
-        // Check the value of result and:
-        switch (result)
-        {
-        // If the case is 403 (map.RWM deletion not successful):
-        case 403:
-            // Make a QMessageBox StandardButton object that will store the button the user pressed.
-            QMessageBox::StandardButton confirm;
-
-            // TODO: De-deprecate functions.
-            // Create a message box asking the player to confirm if they want to continue launching the game even though
-            // the map.RWM file could not be deleted, with the default button (when pressing enter) being no.
-            confirm = QMessageBox::warning(this,"Continue launching?", "The map file could not be deleted and will be out of date.\n"\
-                                                                       "Would you like to continue launching the game?", QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
-
-            // If the button pressed was the 'No' button:
-            if (confirm == QMessageBox::No)
-                // Set the first item of the arguments list to 'n' to indicate the launch should not go on.
-                arglist[0] = "n";
-            break;
-
-        // If the case is 404 (campaign map base folder not found):
-        case 404:
-            // Set the first item of the arguments list to 'n' to indicate the launch should not go on.
-            arglist[0] = "n";
-            break;
-        }
-    }
-
     // Return the list of command-line arguments.
     return arglist;
+}
+
+void MainWindow::on_delmapButton_clicked()
+{
+    // Delete the map.rwm to have the game generate an updated one.
+    checkMapRwm(true);
 }
