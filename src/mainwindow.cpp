@@ -1382,6 +1382,9 @@ QList<bool> MainWindow::copyRecursively(QString sourcedirpath, QString destdirpa
         // We declare a variable to confirm whether the file needs replacing or not.
         bool needsrep = false;
 
+        // We declare a variable to confirm whether the file needs copying or not.
+        bool needscopy = false;
+
         // If the file we want to replace exists, we first check if we need to replace it:
         if (fileExists(destpath))
         {
@@ -1415,6 +1418,7 @@ QList<bool> MainWindow::copyRecursively(QString sourcedirpath, QString destdirpa
                     else
                         needsrep = true;
 
+                    // Close the files we opened to prevent file-in-use issues.
                     srcfile.close();
                     dstfile.close();
                 }
@@ -1423,7 +1427,7 @@ QList<bool> MainWindow::copyRecursively(QString sourcedirpath, QString destdirpa
                     needsrep = true;
             }
 
-            // If we do need to replace the file:
+            // If we do need to delete the original file:
             if (needsrep == true)
             {
                 // Get the QFile we made for the destination file and delete it (through remove()).
@@ -1431,22 +1435,33 @@ QList<bool> MainWindow::copyRecursively(QString sourcedirpath, QString destdirpa
                 // If the deletion was not successful, return false.
                 if(!dstfile.remove())
                     return {false,false};
-
-                // Assign the success of copying the source file to its destination to the boolean success variable.
-                success_and_basemapcopy[0] = QFile::copy(srcpath, destpath);
-
-                // If the copying was not successful, return false.
-                if(!success_and_basemapcopy[0])
-                    return {false,false};
-
-                // If the current destination directory is the same as the directory of /maps/base, or if /maps/base has been altered earlier:
-                if (QDir(destpath).absolutePath().indexOf(QDir(QDir::currentPath() + "/../data/world/maps/base").absolutePath()) != -1 || success_and_basemapcopy[1])
-                    // Set the basemapcopy part of the variable as true.
-                    success_and_basemapcopy[1] = true;
+                // If it was successful, inform that we need to copy the file now.
+                else
+                    needscopy = true;
             }
-            else
-                success_and_basemapcopy[0] = true;
         }
+        // If the file was not found, we need to copy it over.
+        else
+            needscopy = true;
+
+        // If we need to copy the file:
+        if (needscopy == true)
+        {
+            // Assign the success of copying the source file to its destination to the boolean success variable.
+            success_and_basemapcopy[0] = QFile::copy(srcpath, destpath);
+
+            // If the copying was not successful, return false.
+            if(!success_and_basemapcopy[0])
+                return {false,false};
+
+            // If the current destination directory is the same as the directory of /maps/base, or if /maps/base has been altered earlier:
+            if (QDir(destpath).absolutePath().indexOf(QDir(QDir::currentPath() + "/../data/world/maps/base").absolutePath()) != -1 || success_and_basemapcopy[1])
+                // Set the basemapcopy part of the variable as true.
+                success_and_basemapcopy[1] = true;
+        }
+        // If we didn't need to copy the file, it was still a success, so change the respective variable to true.
+        else
+            success_and_basemapcopy[0] = true;
     }
 
     // Clear the list of files of its contents.
