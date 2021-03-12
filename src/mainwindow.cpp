@@ -1475,21 +1475,26 @@ QList<bool> MainWindow::copyRecursively(QString sourcedirpath, QString destdirpa
     // folder entries (NoDotAndDotDot).
     files = sourcedir.entryList(QDir::AllDirs | QDir::NoDotAndDotDot);
 
-    // Loop through each file:
+    // Loop through each directory:
     for(int i = 0; i< files.count(); i++)
     {
-        // Generate the paths for the source and destination directories.
-        QString srcname = sourcedirpath + QDir::separator() + files[i];
-        QString destname = destdirpath + QDir::separator() + files[i];
+        // TODO: Make modular.
+        // If the folder does not start with the ignore tag ('[ign]') begin processing it.
+        if (!files[i].startsWith("[ign]", Qt::CaseInsensitive))
+        {
+            // Generate the paths for the source and destination directories.
+            QString srcname = sourcedirpath + QDir::separator() + files[i];
+            QString destname = destdirpath + QDir::separator() + files[i];
 
 
-        // Call the function recursively for the current folder and set the boolean success variable to match the
-        // result of the success status of the recursive function call.
-        success_and_basemapcopy = copyRecursively(srcname, destname, success_and_basemapcopy);
+            // Call the function recursively for the current folder and set the boolean success variable to match the
+            // result of the success status of the recursive function call.
+            success_and_basemapcopy = copyRecursively(srcname, destname, success_and_basemapcopy);
 
-        // If the recursive copying was not successful, return false.
-        if(!success_and_basemapcopy[0])
-            return {false, false};
+            // If the recursive copying was not successful, return false.
+            if(!success_and_basemapcopy[0])
+                return {false, false};
+        }
     }
 
     // We can only reach this point if all folders and files were copied successfully (otherwise, there would have been
