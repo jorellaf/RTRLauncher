@@ -1375,93 +1375,98 @@ QList<bool> MainWindow::copyRecursively(QString sourcedirpath, QString destdirpa
 
     // Loop through each file:
     for(int i = 0; i< files.count(); i++) {
-        // Generate the paths for the source and destination files.
-        QString srcpath = sourcedirpath + QDir::separator() + files[i];
-        QString destpath = destdirpath + QDir::separator() + files[i];
-
-        // We declare a variable to confirm whether the file needs replacing or not.
-        bool needsrep = false;
-
-        // We declare a variable to confirm whether the file needs copying or not.
-        bool needscopy = false;
-
-        // If the file we want to replace exists, we first check if we need to replace it:
-        if (fileExists(destpath))
+        // TODO: Make modular.
+        // If the file does not start with the ignore tag ('[ign]') or .gitkeep, begin processing it.
+        if (!files[i].startsWith("[ign]", Qt::CaseInsensitive) && !files[i].startsWith(".gitkeep", Qt::CaseInsensitive))
         {
-            // We make QFile objects for the source and destination paths.
-            QFile srcfile(srcpath);
-            QFile dstfile(destpath);
+            // Generate the paths for the source and destination files.
+            QString srcpath = sourcedirpath + QDir::separator() + files[i];
+            QString destpath = destdirpath + QDir::separator() + files[i];
 
-            // We check whether the files have the same modification times. If not, we might need to replace them.
-            // Idea taken and adapted from https://stackoverflow.com/a/1761709.
-            if(QFileInfo(srcpath).lastModified() != QFileInfo(destpath).lastModified())
+            // We declare a variable to confirm whether the file needs replacing or not.
+            bool needsrep = false;
+
+            // We declare a variable to confirm whether the file needs copying or not.
+            bool needscopy = false;
+
+            // If the file we want to replace exists, we first check if we need to replace it:
+            if (fileExists(destpath))
             {
-                // If we can open both files as ReadOnly:
-                if(srcfile.open(QFile::ReadOnly) && dstfile.open(QFile::ReadOnly))
-                {
-                    // We try to hash them. We first make QCryptographicHash objects to do an MD5 hash to each file.
-                    // Snippet taken and adapted from https://stackoverflow.com/a/16383433.
-                    QCryptographicHash srchash(QCryptographicHash::Md5);
-                    QCryptographicHash dsthash(QCryptographicHash::Md5);
+                // We make QFile objects for the source and destination paths.
+                QFile srcfile(srcpath);
+                QFile dstfile(destpath);
 
-                    // If we can add the file data to the hash objects to get a hash:
-                    if (srchash.addData(&srcfile) && dsthash.addData(&dstfile))
+                // We check whether the files have the same modification times and size. If not, we might need to replace them.
+                // Idea taken and adapted from https://stackoverflow.com/a/1761709.
+                if(QFileInfo(srcpath).lastModified() != QFileInfo(destpath).lastModified() || srcpath.size() != destpath.size())
+                {
+                    // If we can open both files as ReadOnly:
+                    if(srcfile.open(QFile::ReadOnly) && dstfile.open(QFile::ReadOnly))
                     {
-                        // We check if the hashes are not the same. If they are not, we proceed with replacing the file.
-                        if (srchash.result() != dsthash.result())
+                        // We try to hash them. We first make QCryptographicHash objects to do an MD5 hash to each file.
+                        // Snippet taken and adapted from https://stackoverflow.com/a/16383433.
+                        QCryptographicHash srchash(QCryptographicHash::Md5);
+                        QCryptographicHash dsthash(QCryptographicHash::Md5);
+
+                        // If we can add the file data to the hash objects to get a hash:
+                        if (srchash.addData(&srcfile) && dsthash.addData(&dstfile))
                         {
-                            // We indicate that the file needs replacing.
-                            needsrep = true;
+                            // We check if the hashes are not the same. If they are not, we proceed with replacing the file.
+                            if (srchash.result() != dsthash.result())
+                            {
+                                // We indicate that the file needs replacing.
+                                needsrep = true;
+                            }
                         }
+                        // If we couldn't get a hash, we try to replace them anyways to be safe.
+                        else
+                            needsrep = true;
+
+                        // Close the files we opened to prevent file-in-use issues.
+                        srcfile.close();
+                        dstfile.close();
                     }
-                    // If we couldn't get a hash, we try to replace them anyways to be safe.
+                    // If we couldn't open the files, we try to replace them anyways to be safe.
                     else
                         needsrep = true;
-
-                    // Close the files we opened to prevent file-in-use issues.
-                    srcfile.close();
-                    dstfile.close();
                 }
-                // If we couldn't open the files, we try to replace them anyways to be safe.
-                else
-                    needsrep = true;
-            }
 
-            // If we do need to delete the original file:
-            if (needsrep == true)
+                // If we do need to delete the original file:
+                if (needsrep == true)
+                {
+                    // Get the QFile we made for the destination file and delete it (through remove()).
+                    // We need to delete it first, since copy() does not overwrite.
+                    // If the deletion was not successful, return false.
+                    if(!dstfile.remove())
+                        return {false,false};
+                    // If it was successful, inform that we need to copy the file now.
+                    else
+                        needscopy = true;
+                }
+            }
+            // If the file was not found, we need to copy it over.
+            else
+                needscopy = true;
+
+            // If we need to copy the file:
+            if (needscopy == true)
             {
-                // Get the QFile we made for the destination file and delete it (through remove()).
-                // We need to delete it first, since copy() does not overwrite.
-                // If the deletion was not successful, return false.
-                if(!dstfile.remove())
+                // Assign the success of copying the source file to its destination to the boolean success variable.
+                success_and_basemapcopy[0] = QFile::copy(srcpath, destpath);
+
+                // If the copying was not successful, return false.
+                if(!success_and_basemapcopy[0])
                     return {false,false};
-                // If it was successful, inform that we need to copy the file now.
-                else
-                    needscopy = true;
+
+                // If the current destination directory is the same as the directory of /maps/base, or if /maps/base has been altered earlier:
+                if (QDir(destpath).absolutePath().indexOf(QDir(QDir::currentPath() + "/../data/world/maps/base").absolutePath()) != -1 || success_and_basemapcopy[1])
+                    // Set the basemapcopy part of the variable as true.
+                    success_and_basemapcopy[1] = true;
             }
+            // If we didn't need to copy the file, it was still a success, so change the respective variable to true.
+            else
+                success_and_basemapcopy[0] = true;
         }
-        // If the file was not found, we need to copy it over.
-        else
-            needscopy = true;
-
-        // If we need to copy the file:
-        if (needscopy == true)
-        {
-            // Assign the success of copying the source file to its destination to the boolean success variable.
-            success_and_basemapcopy[0] = QFile::copy(srcpath, destpath);
-
-            // If the copying was not successful, return false.
-            if(!success_and_basemapcopy[0])
-                return {false,false};
-
-            // If the current destination directory is the same as the directory of /maps/base, or if /maps/base has been altered earlier:
-            if (QDir(destpath).absolutePath().indexOf(QDir(QDir::currentPath() + "/../data/world/maps/base").absolutePath()) != -1 || success_and_basemapcopy[1])
-                // Set the basemapcopy part of the variable as true.
-                success_and_basemapcopy[1] = true;
-        }
-        // If we didn't need to copy the file, it was still a success, so change the respective variable to true.
-        else
-            success_and_basemapcopy[0] = true;
     }
 
     // Clear the list of files of its contents.
@@ -1477,18 +1482,14 @@ QList<bool> MainWindow::copyRecursively(QString sourcedirpath, QString destdirpa
         QString srcname = sourcedirpath + QDir::separator() + files[i];
         QString destname = destdirpath + QDir::separator() + files[i];
 
-        // TODO: Make modular.
-        // If the file does not start with the ignore tag ('[ign]'):
-        if (!srcname.startsWith("[ign]", Qt::CaseInsensitive))
-        {
-            // Call the function recursively for the current folder and set the boolean success variable to match the
-            // result of the success status of the recursive function call.
-            success_and_basemapcopy = copyRecursively(srcname, destname, success_and_basemapcopy);
 
-            // If the recursive copying was not successful, return false.
-            if(!success_and_basemapcopy[0])
-                return {false, false};
-        }
+        // Call the function recursively for the current folder and set the boolean success variable to match the
+        // result of the success status of the recursive function call.
+        success_and_basemapcopy = copyRecursively(srcname, destname, success_and_basemapcopy);
+
+        // If the recursive copying was not successful, return false.
+        if(!success_and_basemapcopy[0])
+            return {false, false};
     }
 
     // We can only reach this point if all folders and files were copied successfully (otherwise, there would have been
